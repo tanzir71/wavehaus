@@ -7,6 +7,9 @@ test('the footer remains reachable in one jump to the bottom', async ({ browser,
     const page = await context.newPage();
     await page.goto(baseURL!);
     await page.keyboard.press('End');
+    // Native smooth scrolling can expose the credit line before it has reached
+    // the final bottom padding. Wait for this same End-key scroll to settle.
+    await expect.poll(() => page.evaluate(() => Math.abs(scrollY + innerHeight - document.documentElement.scrollHeight) <= 1)).toBe(true);
     await expect(page.locator('.footer-credit')).toBeInViewport({ ratio: 1 });
     const bounds = await page.evaluate(() => ({
       atBottom: Math.abs(scrollY + innerHeight - document.documentElement.scrollHeight) <= 1,
