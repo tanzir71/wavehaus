@@ -1,0 +1,25 @@
+{
+  "tool": "Lighthouse 13.6.0",
+  "date": "2026-11-23",
+  "profile": "default mobile, local Pages build; browser demo signed in",
+  "scores": {
+    "home": {
+      "accessibility": 100
+    },
+    "now-playing": {
+      "accessibility": 100
+    },
+    "sign-in": {
+      "accessibility": 100
+    },
+    "settings": {
+      "accessibility": 100
+    },
+    "changelog": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "wavehaus",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -13,9 +13,11 @@
     "dev:demo": "vite --config app/vite.config.ts --mode demo --host 127.0.0.1",
     "build": "node scripts/build.mjs",
     "build:pages": "node scripts/build.mjs pages",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && tsc --project server-worker/tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
-    "test:api": "vitest run --config vitest.api.config.ts",
+    "test:api": "node scripts/test-api.mjs",
+    "test:php": "node scripts/test-backend.mjs php",
+    "test:worker": "node scripts/test-backend.mjs worker",
     "e2e": "playwright test",
     "package": "node scripts/package.mjs",
     "preview": "node scripts/serve.mjs"

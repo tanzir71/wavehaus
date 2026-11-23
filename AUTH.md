@@ -44,6 +44,7 @@ There are no third-party auth providers, email is not required, and nothing is h
   - Scan the QR with the camera. The PWA reads `location.hash` and claims it.
   - Or tap **Use a code from another device** on the sign-in screen and type the 6 digits.
 - The code allows 5 attempts per code, then it's burned. The 6-digit claim is also rate-limited per IP.
+- Implementation detail: the five-attempt bucket uses the submitted code's hash. A mistyped six-digit number cannot identify which pending pairing it was intended for; the separate ten-attempt IP limit bounds that guessing. A valid code or QR is consumed atomically on its first successful claim.
 - This is the fastest way to get the phone signed in after setting up on desktop. M11 (`21:1095`) shows it.
 
 ## Roles & permissions

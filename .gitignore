@@ -13,3 +13,6 @@ coverage/
 .env*
 !.env.example
 /app/public/chime-test.wav
+**/.dev.vars
+**/wavehaus-data/
+**/data-*/

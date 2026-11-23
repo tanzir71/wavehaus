@@ -4,8 +4,9 @@ Source of truth: the unmodified files in `/handover`.
 
 ## Milestones
 
-- M0 — Implementation and local functional checks complete; publishing the preview and measuring all documentation pages.
-- M1–M10 — Pending, in the order defined in `/handover/TASKS.md`.
+- M0 — Shipped: PR #1 merged, tag/release `v0.0.0`, CI and Pages green. The live preview was checked for playback, installability and deep routing.
+- M1 — Implemented and locally verified; milestone PR/release and Pages deployment pending.
+- M2–M10 — Pending, in the order defined in `/handover/TASKS.md`.
 
 ## Verification boundaries
 
@@ -30,5 +31,17 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 ## Remaining acceptance
 
 - Physical Brave/Chrome/iPhone screen-lock and OS share-target checks remain unverified; viewport emulation does not establish those results.
-- M1 adds production setup/auth and the first PHP/Worker zips. M2–M10 remain pending.
+- M2–M10 remain pending. M1 production music endpoints intentionally remain unavailable until M2/M3.
 - Owner-supplied homepage/Showcase additions were incorporated into the handover snapshot. They ship in M3, with the app at `/app/` and the separate project site on Pages.
+
+## M1 verification
+
+- Frontend and Worker TypeScript checks passed.
+- Shared API/auth contract: 17 passing checks per adapter (demo, PHP and actual local Worker/D1). The one skipped check per target is explicitly backend-specific: seeded upload validation for demo, independent browser-session revocation for HTTP servers.
+- PHP and Worker: Android and desktop browser flows passed, using real Secure/HttpOnly `__Host-` cookies, a separately paired browser and session revocation.
+- Pages demo: 10 browser checks passed across Android and desktop, including saved-code gating, device pairing UI, sign-out clearing playback, and stored-media denial after sign-out. Two server-only tests are exercised separately by the backend runners.
+- One-use owner reset was tested with competing requests on Worker and the packaged PHP server.
+- Both ZIPs passed independent standard-library ZIP validation. Two overwrites preserved the owner, settings, sessions, secret, media and player state. Private routing, password rehash on login and random fallback-data discovery also passed.
+- Lighthouse 13.6.0: Home, Now Playing, sign-in and Settings accessibility 100; no zero-score audits. Chromium reported no PWA installability errors. Results: `m1-lighthouse.json`.
+- Initial entry JavaScript: 48.8 KB gzip in demo; about 41.5 KB in production. Upload/music-metadata and auth screens load as separate chunks.
+- Tack port mapping and explicit M7 registration/spam-hardening deferrals are recorded in `REFERENCES.md`.

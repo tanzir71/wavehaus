@@ -8,4 +8,8 @@ The runtime and npm build/test dependencies are exactly the handover’s approve
 - FontTools 4.63.0 was used as an optional asset-maintenance tool to subset the landing fonts to Latin, punctuation, arrows and the moment/check glyphs. The subset WOFF2 files are committed, so neither FontTools nor Python is needed to build or deploy. The PWA retains the full official Geist variable fonts for user-supplied track names. Both copies include the OFL license.
 - The background-test audio is generated as PCM WAV by `scripts/make-chime.mjs`, rather than an MP3 that would require an encoder. It is 45 seconds with a chime at 30 seconds, with a correct `.wav` name and MIME type.
 
-Wrangler is deployment tooling for the Worker, not a frontend/runtime dependency. The M0 server folders are migration/deployment skeletons; no production server zip is published before M1.
+Wrangler 4.166.0 is pinned separately in `server-worker/package.json` as deployment/local-test tooling. It is required to build/deploy and emulate D1/R2, and ships no dependency in the frontend or PHP runtime. The Worker source uses WebCrypto and platform bindings directly, without a framework.
+
+Pairing uses a small local QR encoder (Model 2, version 6/L), independently decoded with OpenCV 4.12.0 during verification. Neither QR generation nor pairing sends secrets to an external service. OpenCV is an optional verification tool only.
+
+Release archives use Node's built-in zlib and a ZIP writer. The independent archive/redeploy test uses Python's standard-library zipfile/SQLite/HTTP modules; no Python package or Python runtime is needed to build, package or host Wavehaus.

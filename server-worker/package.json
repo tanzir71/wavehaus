@@ -1,1 +1,1 @@
-{"private":true,"type":"module","scripts":{"deploy":"wrangler d1 migrations apply wavehaus --remote && wrangler deploy"},"devDependencies":{"wrangler":"4.50.0"}}
+{"private":true,"type":"module","scripts":{"deploy":"wrangler d1 migrations apply wavehaus --remote && wrangler deploy"},"devDependencies":{"wrangler":"4.166.0"}}
