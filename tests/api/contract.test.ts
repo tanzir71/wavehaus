@@ -66,5 +66,13 @@ describe('shared API and auth contract',()=>{
   for(const size of [600,96]){const image=await owner.raw('/art/'+uploaded.album.id+'/'+size+'.webp');expect(image.status).toBe(200);expect(image.headers['content-type']).toBe('image/webp');expect(image.headers['cache-control']).toContain('private');expect(String.fromCharCode(...image.bytes.slice(8,12))).toBe('WEBP');}
   const delta=(await owner.request('/api/library?since='+before)).body;expect(delta.items.albums.find((a:any)=>a.id===uploaded.album.id)).toMatchObject({art_source:'embedded'});expect(delta.rev).toBeGreaterThan(before);
  });
+ it('rejects forged full hashes and unsupported magic without adding rows or charging quota',async()=>{
+  const before=(await owner.request('/api/library?since=0')).body.rev,used=(await owner.request('/api/auth/me')).body.user.used_bytes,valid=wav(new Float32Array(16000).fill(.02));
+  for(const mode of ['hash','magic']){
+   const bytes=Uint8Array.from(valid);if(mode==='magic')bytes.set([78,79,80,69],0);const sha=mode==='hash'?'0'.repeat(64):createHash('sha256').update(bytes).digest('hex'),start=await owner.request('/api/uploads','POST',{filename:'Rejected '+mode+'.wav',size:bytes.length,sha256:sha,mime:'audio/wav'});expect(start.status).toBe(201);const path='/api/uploads/'+start.body.uploadId;expect((await owner.binary(path+'/parts/1',bytes)).status).toBe(200);
+   const completed=await owner.request(path+'/complete','POST',{metadata:{title:'Rejected',artist:'No added artist',durationMs:1000},album:{title:'No added album'}});expect(completed.status).toBe(mode==='hash'?409:415);expect(completed.body.error.code).toBe(mode==='hash'?'hash_mismatch':'unsupported');expect((await owner.request(path,'DELETE')).status).toBe(200);
+  }
+  const after=await owner.request('/api/library?since='+before);expect(Object.values(after.body.items).flat()).toHaveLength(0);expect((await owner.request('/api/auth/me')).body.user.used_bytes).toBe(used);
+ });
 
 });

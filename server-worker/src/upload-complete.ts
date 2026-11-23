@@ -4,7 +4,7 @@ import { sha,ulid } from './crypto';
 import { fail } from './http';
 import { verifyObject } from './file-crypto';
 import { albumRow,trackRow,type WireRow } from './library';
-import { clearParts,getUpload,mediaKey,partKey,parts,withUploadLease,type Upload } from './upload-store';
+import { assemblyKey,clearParts,getUpload,mediaKey,partKey,parts,withUploadLease,type Upload } from './upload-store';
 import type { Auth,Env,Statement } from './types';
 
 const tint=(artist:string,album:string)=>coverHash(`${artist.toLowerCase()}|${album.toLowerCase()}`)%6;
@@ -16,19 +16,23 @@ export async function completeUpload(env:Env,auth:Auth,initial:Upload,raw:Record
   if(upload.status!=='open'||upload.expires_at<Date.now())fail('upload_closed','This upload is no longer open.',409);
   const count=Math.ceil(upload.size_bytes/upload.chunk_bytes),list=await parts(env,upload.id);if(list.length!==count||list.some((p,i)=>p.part_no!==i+1||p.size_bytes!==Math.min(upload.chunk_bytes,upload.size_bytes-i*upload.chunk_bytes)))fail('incomplete','Some upload parts are missing.',409);
   if(input.album.existingAlbumId&&!await one(env.DB,'SELECT id FROM albums WHERE id=? AND owner_id=? AND deleted=0',input.album.existingAlbumId,auth.user.id))fail('forbidden','Choose an album that belongs to you.',403);
-  const multipart=env.MEDIA.resumeMultipartUpload(mediaKey(upload),upload.backend_ref),assembled=[];
+  const multipart=env.MEDIA.resumeMultipartUpload(assemblyKey(upload),upload.backend_ref),assembled=[];
   try{
    for(const part of list){await renew();const object=await env.MEDIA.get(partKey(upload,part));if(!object||object.size!==part.size_bytes)fail('incomplete','An upload part is missing.',409);assembled.push(await multipart.uploadPart(part.part_no,object.body));}
    await multipart.complete(assembled);
   }catch(error){
    // Completion may have succeeded before a disconnected request could record
    // it. The immutable object can be re-verified and committed on a retry.
-   if(!await env.MEDIA.head(mediaKey(upload)))throw error;
+   if(!await env.MEDIA.head(assemblyKey(upload)))throw error;
   }
-  await renew();const verification=await verifyObject(env.MEDIA,mediaKey(upload),upload.size_bytes,upload.sha256),mime=sniffAudio(verification.header,upload.filename),m=input.metadata,a=input.album;
+  await renew();const verification=await verifyObject(env.MEDIA,assemblyKey(upload),upload.size_bytes,upload.sha256),mime=sniffAudio(verification.header,upload.filename),m=input.metadata,a=input.album;
   if(m.quickHash&&m.quickHash!==verification.quickHash)fail('hash_mismatch','The quick hash does not match the uploaded file.',409);
   const existing=await one<WireRow>(env.DB,'SELECT * FROM tracks WHERE owner_id=? AND sha256=? AND deleted=0',auth.user.id,upload.sha256);
   if(existing){await run(env.DB,"UPDATE uploads SET status='complete',completed_track_id=? WHERE id=?",existing.id,upload.id);await clearParts(env,upload).catch(()=>console.warn('Upload part cleanup deferred'));return {track:existing,album:await albumRow(env,String(existing.album_id)),changeId:null};}
+  // Unverified bytes never reach the permanent content key, even if a caller
+  // supplies another file's SHA. R2 promotion remains streamed and checksummed.
+  if(await env.MEDIA.head(mediaKey(upload)))await verifyObject(env.MEDIA,mediaKey(upload),upload.size_bytes,upload.sha256);
+  else{const object=await env.MEDIA.get(assemblyKey(upload));if(!object)fail('storage','The assembled upload is missing.',503);await env.MEDIA.put(mediaKey(upload),object.body,{sha256:upload.sha256,httpMetadata:{contentType:mime}});}
   const uid=auth.user.id,now=Date.now(),trackId=ulid(),albumId=ulid(),changeId=ulid(),trackArtistKey=normalized(m.artist),albumArtistKey=normalized(a.artistName),mergeKey=await sha(`${albumArtistKey}\x1f${normalized(a.title)}`);
   const condition='EXISTS(SELECT 1 FROM upload_claims WHERE upload_id=? AND claim_id=? AND quota_reserved=1)',guard=[upload.id,claim],bump=()=>stmt(env.DB,`UPDATE revs SET n=n+1 WHERE id=1 AND ${condition}`,...guard);
   const statements:Statement[]=[stmt(env.DB,`UPDATE upload_claims SET quota_reserved=1 WHERE upload_id=? AND claim_id=? AND EXISTS(SELECT 1 FROM uploads WHERE id=? AND user_id=? AND status='open') AND EXISTS(SELECT 1 FROM users WHERE id=? AND status='active' AND (quota_bytes IS NULL OR used_bytes+?<=quota_bytes)) AND (? IS NULL OR EXISTS(SELECT 1 FROM albums WHERE id=? AND owner_id=? AND deleted=0))`,upload.id,claim,upload.id,uid,uid,upload.size_bytes,a.existingAlbumId,a.existingAlbumId,uid)];

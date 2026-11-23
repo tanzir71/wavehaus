@@ -50,7 +50,7 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 
 ## M2 verification
 
-- 23 unit checks and 22 shared API/auth checks per adapter passed. The one skipped API check per target is explicitly backend-specific.
+- 23 unit checks and 23 shared API/auth checks per adapter passed. The one skipped API check per target is explicitly backend-specific.
 - Both HTTP backends passed browser tag/artwork/lyrics and second-session sync checks, plus a 300 MiB throttled reload/resume test with exact SHA and no confirmed-chunk retransmission.
 - Six-format folder import and duplicate override passed on Android and desktop Pages emulation. The share-target handler passed simulated POST intake; physical OS sharing is unverified.
 - Fresh/upgraded/legacy SQLite and D1 schemas match, with preserved data and foreign keys. Both release archives passed safe overwrite checks.
