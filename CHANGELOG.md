@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.0 — Offline listening and listening tools
+
+- Download tracks, albums and playlists through a two-request queue. Offline byte ranges preserve seeking, with account-scoped storage, permission refresh, cancellation and storage persistence controls.
+- Restore the last signed-in library offline within its session expiry; signing out and visibility changes remove cached music.
+- Follow synced embedded/LRC lyrics, save/edit/delete private moments, and set draggable/keyboard A–B loop handles.
+- Added a moments API to all three adapters and a storage/downloads screen. Initial budgets are enforced during publishing builds. No testing was run, as requested.
+
 ## v0.8.0 — M8 · 2026-11-24
 
 Your assistant. Your permissions.

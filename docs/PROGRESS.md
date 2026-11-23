@@ -15,8 +15,9 @@ Source of truth: the unmodified files in `/handover`.
 - M5 — Shipped: PR #7, v0.5.0, release archives and Pages published.
 - M6 — Shipped: PR #8, v0.6.0, release archives and Pages published.
 - M7 — Shipped: PR #9, v0.7.0, release archives and Pages published.
-- M8 — Implemented: token scopes/expiry, the Node MCP server, attributed/filterable activity, partial Undo and agent-operable controls. Publishing v0.8.0.
-- M9–M10 — Pending, in the order defined in `/handover/TASKS.md`.
+- M8 — Shipped: PR #10, v0.8.0, release archives and Pages published.
+- M9 — Implemented: offline downloads, storage/persistence, synced lyrics, moments CRUD and A–B loops. Publishing v0.9.0.
+- M10 — Pending: accessibility/performance polish, iOS best effort, final docs and 1.0.
 
 ## Verification boundaries
 
@@ -41,7 +42,7 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 ## Remaining acceptance
 
 - Physical Brave/Chrome/iPhone screen-lock and OS share-target checks remain unverified; viewport emulation does not establish those results.
-- M9–M10 remain pending. Production upload and authenticated media endpoints are implemented.
+- M10 remains pending. Production upload and authenticated media endpoints are implemented.
 - The 23 November scope correction removes the visitor website and anonymous media access. Production builds default to `/` and support `APP_BASE`; Pages retains `/wavehaus/app/`.
 
 ## M1 verification

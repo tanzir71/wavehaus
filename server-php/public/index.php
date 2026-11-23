@@ -13,6 +13,7 @@ require_once $lib.'/media.php';
 require_once $lib.'/uploads.php';
 require_once $lib.'/art.php';
 require_once $lib.'/playback.php';
+require_once $lib.'/moments.php';
 require_once $lib.'/journal.php';
 require_once $lib.'/metadata.php';
 require_once $lib.'/visibility.php';

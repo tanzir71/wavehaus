@@ -1,3 +1,4 @@
+import {momentRoutes} from './moments';
 import { admin,authRoutes,currentAuth,iterations } from './auth';
 import { one,settings } from './db';
 import { body,fail,json } from './http';
@@ -14,7 +15,7 @@ import {readApi} from './read-api';
 import {tokenRoutes} from './tokens';
 import {accessRoutes,registrationRoutes} from './access';
 import {playlistRoutes} from './playlists';
-export const VERSION='0.8.0',SCHEMA=9;
+export const VERSION='0.9.0',SCHEMA=10;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
  if(path==='/api/health'&&method==='GET')return json({ok:true,version:VERSION,schema:SCHEMA,backend:'worker',needsSetup:!await one(env.DB,'SELECT id FROM users LIMIT 1')});
@@ -32,6 +33,7 @@ export async function apiRoute(request:Request,env:Env,path=new URL(request.url)
  const uploaded=await uploadsRoutes(request,env,auth,path);if(uploaded)return uploaded;
  const artwork=await artworkRoutes(request,env,auth,path);if(artwork)return artwork;
  const library=await libraryRoutes(request,env,auth,path);if(library)return library;
+ const moments=await momentRoutes(request,env,auth,path);if(moments)return moments;
  const playback=await playbackRoutes(request,env,auth,path);if(playback)return playback;
  if(path==='/api/admin/settings'){admin(auth);if(method==='GET')return json(await settings(env.DB));if(method==='PATCH'){await env.DB.batch(saveSettings(env,await body(request)));return json(await settings(env.DB));}}
  fail('not_found','This endpoint is not available in this release.',404);
