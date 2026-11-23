@@ -1,13 +1,13 @@
-Wavehaus M6 adds worker search, library views and listening recommendations.
+Wavehaus M7 adds private/public controls and member access management.
 
 Preview: https://tanzir71.github.io/wavehaus/
 App: https://tanzir71.github.io/wavehaus/app/
 
 What to try:
-1. Search for a song or artist, then switch result filters or open a folder.
-2. Create a private playlist, add songs through Track options, reorder it and use Undo.
-3. Open a mix from Home, start radio or enable Smart shuffle from the player.
+1. Make a playlist public with its own-track checkbox, then make it private in one tap.
+2. Select folders or albums in Library and apply privacy together; Undo restores previous values.
+3. Open Access & members, create an invitation, or choose a registration mode and manage requests.
 
-PHP, Worker and demo share playlist behavior and guarded change history. Migration 7 adds stable item identities without replacing existing data. Recommendations use only metadata and your own listening activity on this device. Production packages build at 60.0 KiB initial JavaScript gzip, within the 90 KiB budget; Upload, search and recommendation work stay separate.
+The PHP, Worker and demo adapters support invitations, approval links, roles, quotas and ownership transfer. Registration uses self-hosted proof-of-work with expiring, single-use claims, a honeypot, minimum fill time and rate limits. Email remains optional. Folder visibility defaults persist through redeploys; public relationship revisions restore incremental library entries after republishing.
 
-Both server archives are attached. No new dependency. Per the owner's instruction, only publication builds were run; performance and device acceptance remain unmeasured.
+Publication builds completed: production initial JavaScript 61.7 KiB gzip, demo 73.7 KiB, Worker bundle 45.05 KiB gzip. Both production archives are attached. No new dependency. As requested, only builds needed for publication were run; no additional tests, browser checks or physical-device checks were performed.

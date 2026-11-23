@@ -10,14 +10,17 @@ import { playbackRoutes } from './playback';
 import { journalRoutes } from './journal-routes';
 import { metadataRoutes } from './metadata';
 import {visibilityRoutes} from './visibility';
+import {accessRoutes,registrationRoutes} from './access';
 import {playlistRoutes} from './playlists';
-export const VERSION='0.6.0',SCHEMA=7;
+export const VERSION='0.7.0',SCHEMA=8;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
  if(path==='/api/health'&&method==='GET')return json({ok:true,version:VERSION,schema:SCHEMA,backend:'worker',needsSetup:!await one(env.DB,'SELECT id FROM users LIMIT 1')});
  if(path==='/api/config'&&method==='GET'){const cfg=await settings(env.DB),hashIterations=iterations(env);return json({serverName:cfg.server_name,registrationMode:cfg.registration_mode,maxChunkBytes:8*1024**2,maxFileBytes:cfg.max_file_bytes,powDifficulty:cfg.pow_difficulty,hashIterations,securityWarning:hashIterations<100000?'Password hashing is below the recommended 100,000 iterations.':null,features:{demo:false,uploads:true}});}
+ const registration=await registrationRoutes(request,env,path);if(registration)return registration;
  const result=await authRoutes(request,env,path);if(result)return result;
  const auth=(await currentAuth(request,env))!;
+ const access=await accessRoutes(request,env,auth,path);if(access)return access;
  const journal=await journalRoutes(request,env,auth,path);if(journal)return journal;
  const metadata=await metadataRoutes(request,env,auth,path);if(metadata)return metadata;
  const visibility=await visibilityRoutes(request,env,auth,path);if(visibility)return visibility;

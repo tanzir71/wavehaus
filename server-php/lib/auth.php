@@ -104,7 +104,7 @@ function auth_routes(PDO $db, string $path, string $method): bool {
     }
     if ($path==='/api/auth/me' && $method==='GET') {
         $auth=current_auth($db);$cfg=settings($db);$left=query_one($db,'SELECT COUNT(*) AS n FROM recovery_codes WHERE user_id=? AND used_at IS NULL',[$auth['user']['id']]);
-        reply([...$auth,'settings'=>array_intersect_key($cfg,array_flip(['server_name','registration_mode','default_visibility','members_can_upload','library_rules'])),'recoveryCodesLeft'=>(int)$left['n']]);
+        reply([...$auth,'settings'=>array_intersect_key($cfg,array_flip(['server_name','registration_mode','default_visibility','members_can_upload','library_rules','upload_visibility_locked'])),'recoveryCodesLeft'=>(int)$left['n']]);
     }
     if ($path==='/api/auth/logout' && $method==='POST') { $auth=current_auth($db);execute($db,'DELETE FROM sessions WHERE id=?',[$auth['session']['id']]);session_cookie('',true);reply(['ok'=>true]); }
     if ($path==='/api/sessions' && $method==='GET') { $auth=current_auth($db);$rows=query_all($db,'SELECT id,device_label,user_agent,created_at,last_seen_at,expires_at FROM sessions WHERE user_id=? AND expires_at>? ORDER BY last_seen_at DESC',[$auth['user']['id'],now_ms()]);foreach($rows as &$row)$row['current']=$row['id']===$auth['session']['id'];reply(['items'=>$rows,'nextCursor'=>null]); }

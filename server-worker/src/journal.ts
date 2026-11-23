@@ -1,10 +1,11 @@
 import {journalColumns,JournalConflict,reversibleOperation,type JournalTable,type JournalWrite,type CountGuard} from '../../shared/journal';
 import {ulid} from './crypto';
+import {refreshVisibility} from './visibility-refresh';
 import {stmt} from './db';
 import {fail} from './http';
 import type {Auth,Env,Statement} from './types';
 export type {RowGuard,CountGuard,JournalWrite} from '../../shared/journal';
-const tables:JournalTable[]=['artists','albums','tracks','playlists','playlist_items'];
+const tables:JournalTable[]=['artists','albums','tracks','playlists','playlist_items','folder_rules'];
 const encoder=new TextEncoder();
 function chunks<T>(rows:T[]){
  const groups:T[][]=[];let group:T[]=[],size=2;
@@ -16,7 +17,7 @@ const quote=(name:string)=>'"'+name+'"'; // Names only come from journalColumns.
 
 /** Every write, including its journal, is conditional on one atomic gate. */
 export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
- const playlistOnly=plan.ops.every(op=>op.table==='playlists'||op.table==='playlist_items');if(auth.user.role==='listener'&&!playlistOnly)fail('forbidden','Your account cannot edit library metadata.',403);
+ plan=await refreshVisibility(env,plan);const playlistOnly=plan.ops.every(op=>op.system||op.table==='playlists'||op.table==='playlist_items');if(auth.user.role==='listener'&&!playlistOnly)fail('forbidden','Your account cannot edit library metadata.',403);
  if(plan.ops.length>10000||(plan.undoIds?.length||0)>2000)fail('too_large','Choose fewer records at once.',413);
  let journalBytes=0;for(const op of plan.ops){journalBytes+=encoder.encode(JSON.stringify(op)).byteLength;if(journalBytes>16*1024**2)fail('too_large','This edit needs too much undo data. Choose fewer rows.',413);}
  if(!plan.ops.length&&!plan.undoIds?.length)return {changeId:plan.appendTo||null,updated:0};
@@ -25,9 +26,9 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
  const guards=plan.guards||plan.ops.flatMap(op=>op.before?[{table:op.table,id:op.id,rev:op.before.rev}]:[]);
  const conditions=["u.id=? AND u.status='active' AND (u.role IN ('owner','admin','uploader') OR(u.role='listener' AND ?=1))"],parameters:unknown[]=[auth.user.id,playlistOnly?1:0];
  for(const table of tables){
-  const expected=guards.filter(row=>row.table===table).map(({id,rev})=>({id,rev}));
+  const expected=guards.filter(row=>row.table===table).map(({id,rev,system})=>({id,rev,system:system?1:0}));
   if(expected.length){
-   conditions.push(`NOT EXISTS(SELECT 1 FROM json_each(?) g LEFT JOIN ${table} r ON r.id=json_extract(g.value,'$.id') WHERE r.id IS NULL OR r.rev<>json_extract(g.value,'$.rev')${table==='artists'?'':" OR (r.owner_id<>u.id AND u.role NOT IN ('owner','admin'))"})`);parameters.push(JSON.stringify(expected));
+   conditions.push(`NOT EXISTS(SELECT 1 FROM json_each(?) g LEFT JOIN ${table} r ON r.id=json_extract(g.value,'$.id') WHERE r.id IS NULL OR r.rev<>json_extract(g.value,'$.rev')${table==='artists'?'':" OR (COALESCE(json_extract(g.value,'$.system'),0)=0 AND r.owner_id<>u.id AND u.role NOT IN ('owner','admin'))"})`);parameters.push(JSON.stringify(expected));
   }
   const created=plan.ops.filter(op=>op.table===table&&!op.before);
   if(created.length){
@@ -36,10 +37,10 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
   }
  }
  const countGroups=new Map<string,CountGuard[]>();for(const guard of plan.counts||[]){
-  if(!(guard.table==='tracks'&&['album_id','artist_id'].includes(guard.column)||guard.table==='albums'&&guard.column==='artist_id'||guard.table==='playlist_items'&&guard.column==='playlist_id'))throw new Error('Invalid reference guard.');
+  if(!(guard.table==='tracks'&&['album_id','artist_id'].includes(guard.column)||guard.table==='albums'&&guard.column==='artist_id'||guard.table==='playlist_items'&&['playlist_id','track_id'].includes(guard.column)||guard.table==='tracks'&&guard.column==='original_path'&&guard.prefix&&typeof guard.ownerId==='string'))throw new Error('Invalid reference guard.');
   const key=guard.table+':'+guard.column,group=countGroups.get(key)||[];group.push(guard);countGroups.set(key,group);
  }
- for(const group of countGroups.values()){const first=group[0];conditions.push(`NOT EXISTS(SELECT 1 FROM json_each(?) g WHERE (SELECT COUNT(*) FROM ${first.table} r WHERE r.${first.column}=json_extract(g.value,'$.id') AND r.deleted=0)<>json_extract(g.value,'$.count'))`);parameters.push(JSON.stringify(group.map(({id,count})=>({id,count}))));}
+ for(const group of countGroups.values()){const first=group[0],where=first.prefix?"r.owner_id=json_extract(g.value,'$.ownerId') AND substr(r.original_path,1,length(json_extract(g.value,'$.id')))=json_extract(g.value,'$.id')":`r.${first.column}=json_extract(g.value,'$.id')`;conditions.push(`NOT EXISTS(SELECT 1 FROM json_each(?) g WHERE (SELECT COUNT(*) FROM ${first.table} r WHERE ${where} AND r.deleted=0)<>json_extract(g.value,'$.count'))`);parameters.push(JSON.stringify(group));}
  if(plan.appendTo){conditions.push('EXISTS(SELECT 1 FROM changes c WHERE c.id=? AND c.user_id=u.id AND c.undone_at IS NULL AND c.undoable=1 AND c.created_at>=? AND json_array_length(c.ops)+(SELECT COUNT(*) FROM change_ops o WHERE o.change_id=c.id)+?<=10000 AND length(CAST(c.ops AS BLOB))+(SELECT COALESCE(SUM(COALESCE(length(CAST(o.before_json AS BLOB)),0)+length(CAST(o.after_json AS BLOB))),0) FROM change_ops o WHERE o.change_id=c.id)+?<=16777216)');parameters.push(plan.appendTo,now-30*86400000,plan.ops.length,journalBytes+32*plan.ops.length);}
  if(plan.undoIds?.length){conditions.push('(SELECT COUNT(*) FROM changes WHERE id IN(SELECT value FROM json_each(?)) AND user_id=u.id AND undone_at IS NULL AND undoable=1 AND created_at>=?)=?');parameters.push(JSON.stringify(plan.undoIds),now-30*86400000,plan.undoIds.length);}
  const statements:Statement[]=[stmt(env.DB,`INSERT INTO mutation_guards(id) SELECT ? FROM users u WHERE ${conditions.join(' AND ')}`,gate,...parameters)];
@@ -71,6 +72,7 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
   const rev=revision("json_extract(j.value,'$.index')");
   statements.push(stmt(env.DB,`INSERT INTO change_ops(change_id,position,table_name,row_id,before_json,after_json) SELECT ?,${rev},json_extract(j.value,'$.table'),json_extract(j.value,'$.id'),json_extract(j.value,'$.before'),json_set(json_extract(j.value,'$.after'),'$.rev',${rev}) FROM json_each(?) j WHERE ${guardExists}`,changeId,payload,gate));
  }
+ for(const table of ['tracks','albums'] as const){const ids=plan.ops.filter(op=>op.table===table&&op.after.visibility==='private').map(op=>op.id);if(ids.length)statements.push(stmt(env.DB,`INSERT OR IGNORE INTO change_audience(change_id,user_id) SELECT ?,owner_id FROM ${table} WHERE owner_id<>? AND id IN(SELECT value FROM json_each(?)) AND ${guardExists}`,changeId,auth.user.id,JSON.stringify(ids),gate));}
  if(plan.undoIds?.length)statements.push(stmt(env.DB,`UPDATE changes SET undone_at=? WHERE id IN(SELECT value FROM json_each(?)) AND user_id=? AND ${guardExists}`,now,JSON.stringify(plan.undoIds),auth.user.id,gate));
  statements.push(stmt(env.DB,'DELETE FROM mutation_guards WHERE id=?',gate));
  let result;try{result=await env.DB.batch(statements);}catch(error){if(/UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/.test(error instanceof Error?error.message:''))throw new JournalConflict(guards.map(({table,id})=>({table,id})));throw error;}

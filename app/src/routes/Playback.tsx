@@ -3,6 +3,8 @@ const TrackOptions=lazy(()=>import('../ui/TrackOptions'));
 import { useRef,useState } from 'preact/hooks';
 import * as player from '../engine/player';
 import type { QueueEntry } from '../engine/queue';
+import {VisibilityChip} from '../ui/Visibility';
+import {user} from '../library/session';
 import { library } from '../library/store';
 import {BackgroundBanner} from '../ui/BackgroundBanner';
 import { time } from '../library/ids';
@@ -20,7 +22,7 @@ export function NowPlaying(){
  const album=library.value.albums.find(a=>a.id===track.album_id),duration=player.durationMs.value||track.duration_ms,kind=context.type.split(':')[0],moments=library.value.moments.filter(m=>m.track_id===track.id&&!m.deleted);
  return <div class="now-playing"><header><a href={href('/')} class="icon-button" aria-label="Close Now Playing"><Icon name="chevron-down"/></a><div><p class="eyebrow">Playing from {['album','playlist','search'].includes(kind)?kind:'your library'}</p><strong>{context.label}</strong></div><button class="icon-button" aria-label="Track options" aria-haspopup="dialog" onClick={()=>setOptions(true)}><Icon name="more"/></button></header>
   <BackgroundBanner/><Cover album={album} title={track.album_title} artist={track.artist_name} size={300}/><div class="now-track"><div><h1>{track.title}</h1><p>{track.artist_name}</p></div><LikeButton id={track.id}/></div>
-  <div class="format-tags"><span>{track.container||track.codec||'Original audio'}</span>{track.sample_rate&&<span>{Math.round(track.sample_rate/1000)} kHz</span>}<span><Icon name={track.visibility==='public'?'globe':'lock'} size={12}/>{track.visibility==='public'?'Public':'Private'}</span></div>
+  <div class="format-tags"><span>{track.container||track.codec||'Original audio'}</span>{track.sample_rate&&<span>{Math.round(track.sample_rate/1000)} kHz</span>}<span>{track.owner_id===user.value?.id&&user.value?.role!=='listener'?<VisibilityChip targets={[{type:'track',id:track.id}]} title={track.title} label={track.visibility==='public'?'Public':'Private'}/>:<><Icon name={track.visibility==='public'?'globe':'lock'} size={12}/>{track.visibility==='public'?'Public':'Private'}</>}</span></div>
   <Waveform variant="Now" peaks={track.peaks} duration={duration} position={player.positionMs.value} playing={player.state.value==='playing'} livePosition={()=>player.audio.currentTime*1000} onSeek={player.seek} moments={moments}/>
   <div class="times"><span>{time(player.positionMs.value)}</span><span>−{time(duration-player.positionMs.value)}</span></div>
   <div class="now-controls"><ShuffleButton/><SmartShuffleButton/><button class="icon-button" aria-label="Previous track" onClick={player.prev}><Icon name="prev" size={30}/></button><PlayButton size="l"/><button class="icon-button" aria-label="Next track" onClick={()=>player.next()}><Icon name="next" size={30}/></button><RepeatButton/></div>

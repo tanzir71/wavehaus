@@ -1,0 +1,13 @@
+CREATE TABLE folder_rules(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL REFERENCES users(id),path TEXT NOT NULL,visibility TEXT NOT NULL DEFAULT 'private' CHECK(visibility IN('private','public')),sync_visibility INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,rev INTEGER NOT NULL,deleted INTEGER NOT NULL DEFAULT 0,UNIQUE(owner_id,path));
+ALTER TABLE change_ops RENAME TO change_ops_old;
+DROP INDEX change_ops_row;
+CREATE TABLE change_ops(change_id TEXT NOT NULL REFERENCES changes(id) ON DELETE CASCADE,position INTEGER NOT NULL,table_name TEXT NOT NULL CHECK(table_name IN('tracks','albums','artists','playlists','playlist_items','likes','moments','folder_rules')),row_id TEXT NOT NULL,before_json TEXT,after_json TEXT,PRIMARY KEY(change_id,position)) WITHOUT ROWID;
+INSERT INTO change_ops SELECT * FROM change_ops_old;
+DROP TABLE change_ops_old;
+CREATE INDEX change_ops_row ON change_ops(table_name,row_id);
+ALTER TABLE invites ADD COLUMN referrer_id TEXT REFERENCES users(id);
+ALTER TABLE access_requests ADD COLUMN invite_id TEXT REFERENCES invites(id);
+CREATE TABLE change_audience(change_id TEXT NOT NULL REFERENCES changes(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(change_id,user_id)) WITHOUT ROWID;
+CREATE INDEX change_audience_user ON change_audience(user_id,change_id);
+INSERT OR IGNORE INTO settings(key,value,updated_at) VALUES('upload_visibility_locked','false',0);
+INSERT OR IGNORE INTO schema_migrations(version,name,applied_at) VALUES(8,'0008_access_visibility.sql',CAST(strftime('%s','now') AS INTEGER)*1000);

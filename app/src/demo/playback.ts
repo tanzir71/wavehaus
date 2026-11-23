@@ -8,8 +8,8 @@ const json=(data:unknown)=>Response.json(data,{headers:{'Cache-Control':'no-stor
 export async function demoPlayback(request:Request,path:string){
  const method=request.method;
  if(path==='/api/player-state'){
-  if(method==='GET')return json((await readState())!.playerState);
-  if(method==='PUT'){const value=playerInput(await request.json()),saved=await mutate(s=>{if(!demoSignedIn(s))throw new ApiError('unauthenticated','Sign in to continue.',401);if(((s.playerState as {updatedAt?:number}|null)?.updatedAt||0)>value.updatedAt)return s.playerState;s.playerState=value;return value;});return json(saved);}
+  if(method==='GET'){const state=(await readState())!;return json(state.playerStates?.[state.user.id]||(state.user.id==='01D3M000000000000000000000'?state.playerState:null));}
+  if(method==='PUT'){const value=playerInput(await request.json()),saved=await mutate(s=>{if(!demoSignedIn(s))throw new ApiError('unauthenticated','Sign in to continue.',401);s.playerStates||={};if(((s.playerStates[s.user.id] as {updatedAt?:number}|null)?.updatedAt||0)>value.updatedAt)return s.playerStates[s.user.id];s.playerStates[s.user.id]=value;return value;});return json(saved);}
  }
  if(path!=='/api/plays')return null;
  if(method==='POST'){

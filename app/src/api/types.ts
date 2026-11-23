@@ -14,7 +14,7 @@ export interface Like { user_id:string; track_id:string; liked_at:number; rev:nu
 export interface Moment extends Row { user_id:string; track_id:string; at_ms:number; label:string; created_at:number }
 export interface Library { tracks:Track[]; albums:Album[]; artists:Artist[]; playlists:Playlist[]; playlistItems:PlaylistItem[]; likes:Like[]; moments:Moment[] }
 export interface LibraryDelta { rev:number; items:Library; hidden:{tracks:string[];albums:string[];playlists:string[]}; more:boolean }
-export interface User { id:string; username:string; display_name:string; role:'owner'|'admin'|'uploader'|'listener'; used_bytes:number; quota_bytes:number|null }
+export interface User { id:string; username:string; display_name:string; role:'owner'|'admin'|'uploader'|'listener'; used_bytes:number; quota_bytes:number|null;status?:string;invites_left?:number;invited_by?:string|null;created_at?:number;email?:string|null }
 export interface Api {
  request<T>(path:string,init?:RequestInit):Promise<T>;
  mediaUrl(track:Track):string;
