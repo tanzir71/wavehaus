@@ -6,7 +6,8 @@ Source of truth: the unmodified files in `/handover`.
 
 - M0 — Shipped: PR #1 merged, tag/release `v0.0.0`, CI and Pages green. The live preview was checked for playback, installability and deep routing.
 - M1 — Shipped: PR #2 merged, tag/release `v0.1.0`, both server archives published and Pages green. Settings, Security and pairing were checked on the deployed preview.
-- M2 — In progress: resumable uploads, bounded-memory analysis, metadata/artwork and real server library sync.
+- M2 — Shipped: PR #3 merged, tag/release `v0.2.0`, both server archives and Pages verified. Resumable uploads, bounded-memory analysis, metadata/artwork and private library sync are implemented.
+- Landing correction — v0.2.1: approved product mockups, fullscreen wave coverage and reliable footer reachability. See `landing-fix-verification.md`.
 - M3–M10 — Pending, in the order defined in `/handover/TASKS.md`.
 
 ## Verification boundaries
@@ -32,7 +33,7 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 ## Remaining acceptance
 
 - Physical Brave/Chrome/iPhone screen-lock and OS share-target checks remain unverified; viewport emulation does not establish those results.
-- M2 is being verified; M3–M10 remain pending. Production upload and authenticated media endpoints are now implemented.
+- M3–M10 remain pending. Production upload and authenticated media endpoints are implemented.
 - The 23 November scope correction removes the visitor website and anonymous media access. Production builds default to `/` and support `APP_BASE`; Pages retains `/wavehaus/app/`.
 
 ## M1 verification
