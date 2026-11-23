@@ -16,8 +16,8 @@ Source of truth: the unmodified files in `/handover`.
 - M6 — Shipped: PR #8, v0.6.0, release archives and Pages published.
 - M7 — Shipped: PR #9, v0.7.0, release archives and Pages published.
 - M8 — Shipped: PR #10, v0.8.0, release archives and Pages published.
-- M9 — Implemented: offline downloads, storage/persistence, synced lyrics, moments CRUD and A–B loops. Publishing v0.9.0.
-- M10 — Pending: accessibility/performance polish, iOS best effort, final docs and 1.0.
+- M9 — Shipped: PR #11, v0.9.0, release archives and Pages published.
+- M10 — v1.0.0: keyboard/focus, phone/iPhone and update polish, offline route precaching, bounded rendering and final documentation. Release publication is tracked by the Pages and Release workflows.
 
 ## Verification boundaries
 
@@ -42,7 +42,7 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 ## Remaining acceptance
 
 - Physical Brave/Chrome/iPhone screen-lock and OS share-target checks remain unverified; viewport emulation does not establish those results.
-- M10 remains pending. Production upload and authenticated media endpoints are implemented.
+- M0–M10 implementation is complete. See GitHub Releases and the Pages workflow for publication status. Production upload and authenticated media endpoints are implemented.
 - The 23 November scope correction removes the visitor website and anonymous media access. Production builds default to `/` and support `APP_BASE`; Pages retains `/wavehaus/app/`.
 
 ## M1 verification
@@ -66,3 +66,7 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 - Fresh/upgraded/legacy SQLite and D1 schemas match, with preserved data and foreign keys. Both release archives passed safe overwrite checks.
 - Home, Now Playing, Upload, sign-in and Settings accessibility measured 100. Initial JS including static imports is about 55 KiB gzip in demo and 44 KiB in production.
 - Details and boundaries: [M2 verification](m2-verification.md).
+
+## 1.0 publication build
+
+Production package build: initial JavaScript 64.4 KB gzip; Pages demo build: 77.6 KB gzip. Both are below the enforced 90 KB limit. Worker compilation completed (200.93 KiB / 49.70 KiB gzip). Both server archives are built. These are publication build results, not browser, device or Lighthouse measurements. No additional testing was performed.

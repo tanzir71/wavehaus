@@ -19,7 +19,7 @@ async function demoFetchCore(input:RequestInfo|URL,init?:RequestInit):Promise<Re
  if(path.startsWith('/demo-media/')||path.startsWith('/media/')){const state=(await readState())!;if(!demoSignedIn(state))fail('unauthenticated','Sign in to continue.',401);const track=state.tracks.find(t=>t.id===path.split('/')[2]&&!t.deleted);if(track&&track.owner_id!==state.user.id&&track.visibility!=='public')fail('forbidden','This track is private.',403);const blob=track?await getBlob(`audio-${track.id}`):null;return blob&&track?rangeResponse(blob,request,track.mime,`"${track.sha256}"`):response({error:{code:'not_found',message:'Track not found'}},404);}
  if(!['GET','HEAD'].includes(method)&&request.headers.get('X-Wavehaus')!=='1'&&!currentDemoToken())return response({error:{code:'csrf',message:'Missing X-Wavehaus header.'}},403);
  const body=()=>request.json();const s=(await readState())!;
- if(path==='/api/health')return response({ok:true,version:'0.9.0',schema:10,backend:'demo',needsSetup:false});
+ if(path==='/api/health')return response({ok:true,version:'1.0.0',schema:10,backend:'demo',needsSetup:false});
  if(path==='/api/config')return response({serverName:s.settings.server_name,registrationMode:s.settings.registration_mode,maxChunkBytes:8*1024*1024,maxFileBytes:2*1024**3,powDifficulty:18,features:{demo:true,uploads:true}});
  if(['/api/auth/challenge','/api/auth/register','/api/auth/request-access'].includes(path)||path.startsWith('/api/admin/')||path.startsWith('/api/invites')){const{demoAccess}=await import('./access');const result=await demoAccess(request,path);if(result)return result;}
  if(path.startsWith('/api/tokens')){const{demoTokens}=await import('./tokens');const result=await demoTokens(request,path);if(result)return result;}

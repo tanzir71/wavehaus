@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.0 — Wavehaus 1.0
+
+- Completes the M0–M10 release: both production adapters, installable browser demo, private music library, playback, organise/bulk tools, access controls, assistants and offline listening.
+- Adds explicit client update/reload controls, keyboard focus restoration, dismissible account navigation, phone target/safe-area improvements and iPhone volume behavior.
+- Precaches lightweight listening routes and bounds initial collection/library rendering while retaining full playback and selection context. Upload/tag parsing stays lazy and initial JavaScript is capped at 90 KB gzip during builds.
+- Refreshes installation, update/restore, privacy, offline, lyrics/moments and assistant documentation. Keeps the corrected fullscreen landing footer and design mockups.
+- No additional testing was performed, as requested. Publication builds do not establish device playback, accessibility or Lighthouse scores.
+
 ## v0.9.0 — Offline listening and listening tools
 
 - Download tracks, albums and playlists through a two-request queue. Offline byte ranges preserve seeking, with account-scoped storage, permission refresh, cancellation and storage persistence controls.

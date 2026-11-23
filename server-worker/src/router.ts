@@ -15,7 +15,7 @@ import {readApi} from './read-api';
 import {tokenRoutes} from './tokens';
 import {accessRoutes,registrationRoutes} from './access';
 import {playlistRoutes} from './playlists';
-export const VERSION='0.9.0',SCHEMA=10;
+export const VERSION='1.0.0',SCHEMA=10;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
  if(path==='/api/health'&&method==='GET')return json({ok:true,version:VERSION,schema:SCHEMA,backend:'worker',needsSetup:!await one(env.DB,'SELECT id FROM users LIMIT 1')});

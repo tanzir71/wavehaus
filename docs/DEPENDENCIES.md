@@ -2,7 +2,7 @@
 
 The runtime and npm build/test dependencies are exactly the handover’s approved list. Versions are pinned in package.json and the lockfile. No CSS framework, router library, service-worker framework or audio encoder is used.
 
-- `music-metadata` and the Upload route are dynamically imported. The service worker precaches only the shell; it does not preload those lazy modules.
+- `music-metadata` and the Upload route are dynamically imported. The service worker precaches the shell and lightweight listening routes; it does not preload those lazy modules.
 - `sharp` creates responsive AVIF/WebP landing images, square notification artwork and the OG image during the build.
 - Lighthouse CLI 13.6.0 is an ephemeral verification tool used to measure the required acceptance scores. It is not a package dependency and ships no code to the site.
 - FontTools 4.63.0 was used as an optional asset-maintenance tool to subset the landing fonts to Latin, punctuation, arrows and the moment/check glyphs. The subset WOFF2 files are committed, so neither FontTools nor Python is needed to build or deploy. The PWA retains the full official Geist variable fonts for user-supplied track names. Both copies include the OFL license.
@@ -19,3 +19,5 @@ M2's committed audio fixtures are original generated tones. The optional mainten
 The M4A fixture is original ALAC audio written by a small standard-library Python generator, using the documented escape-packet format and MP4 sample tables. Its packets were independently decoded with libsndfile and matched the generated PCM exactly. The installed Chromium does not decode ALAC; tags and upload support do not imply that every browser can play every codec. No encoder is shipped in Wavehaus.
 
 Large-file acceptance uses legal FLAC padding metadata around an original two-second stream. The ignored 300 MB artifact independently decodes to the same PCM as the tiny fixture, and is generated with Node's standard library during tests.
+
+M8–1.0 add no dependencies. The optional local MCP CLI can reuse music-metadata for tags and sharp for image resizing; its core uses only Node built-ins. These libraries are optional on the user’s CLI machine and are never required by the PHP host. The browser Upload parser remains lazy.

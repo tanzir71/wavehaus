@@ -1,6 +1,6 @@
-# Wavehaus Worker — M2
+# Wavehaus Worker — 1.0
 
-Owner setup, sign-in, recovery, devices, settings, resumable uploads, artwork, library sync and authenticated streaming are implemented. Playback hardening continues in M3. The Pages demo has its own browser-local backend.
+Wavehaus 1.0 includes browser setup/recovery, revocable device sessions, resumable uploads, private library sync, streaming, search/mixes, playlists, bulk editing and 30-day Undo, visibility/access controls, scoped assistant tokens and MCP tools. Offline downloads, lyrics, moments and A–B loops run in the PWA. The Pages demo uses a separate browser-local backend.
 
 Use Node 24+ locally; there is no Node server to manage.
 
@@ -21,3 +21,7 @@ For local development in the source repo use `npm run dev:worker`. Its generated
 Update by replacing code and assets while keeping your database ID, bucket name and secrets. Never delete the D1 database or R2 bucket to update. Migrations are idempotent; settings use INSERT OR IGNORE defaults. Keep a D1 export/Time Travel recovery point before upgrades.
 
 Last-resort owner recovery: `npx wrangler secret put RESET_OWNER`, open `/setup/reset`, then remove the secret with `npx wrangler secret delete RESET_OWNER`. Each reset string can be used once even before removal.
+
+Both archives include tools/mcp.mjs and built companion files. Configure WAVEHAUS_URL and WAVEHAUS_TOKEN locally; see tools/README.md. This CLI is optional and never runs on the PHP host.
+
+The 1.0 release was packaged and published without additional testing at the owner’s request. Device background playback and browser-specific behavior remain unverified beyond the historical results in the source repository.
