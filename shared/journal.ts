@@ -2,7 +2,7 @@ import {UploadError} from './upload-input';
 export type JournalTable='tracks'|'albums'|'artists';
 export type JournalRow=Record<string,unknown>&{id:string;rev:number};
 export interface JournalOp {table:JournalTable;id:string;before:JournalRow|null;after:JournalRow}
-export interface JournalChange {id:string;created_at:number;undone_at:number|null;ops:JournalOp[]}
+export interface JournalChange {id:string;created_at:number;undone_at:number|null;undoable?:number;ops:JournalOp[]}
 export const journalColumns:Record<JournalTable,readonly string[]>={
  tracks:['owner_id','album_id','artist_id','title','artist_name','album_artist','album_title','track_no','disc_no','year','genre','bpm','duration_ms','codec','container','bitrate','sample_rate','bit_depth','channels','replaygain_track_db','replaygain_album_db','has_lyrics','lyrics','lyrics_synced','peaks','storage_key','size_bytes','sha256','quick_hash','original_name','original_path','mime','visibility','organise_source','added_at','deleted'],
  albums:['owner_id','title','artist_id','year','art_source','art_key','tint','visibility','sync_visibility','folder_path','created_at','deleted','merge_key'],
@@ -37,6 +37,7 @@ export function undoPlan(changes:JournalChange[],current:Map<string,JournalRow>,
  if(changes.some(change=>change.undone_at!==null))throw new UploadError('already_undone','An action in this batch was already undone.',409);
  if(changes.some(change=>change.created_at<now-30*86400000))throw new UploadError('undo_expired','Undo is available for 30 days.',409);
  if(changes.some(change=>!change.ops.length))throw new UploadError('not_undoable','This action cannot be undone.');
+ if(changes.some(change=>change.undoable===0))throw new UploadError('not_undoable','This action cannot be undone.');
  const virtual=new Map([...current].map(([key,row])=>[key,{...row}])),touched=new Map<string,{table:JournalTable;id:string}>(),conflicts=new Map<string,{table:JournalTable;id:string}>();
  const latest=(change:JournalChange)=>change.ops.reduce((rev,op)=>Math.max(rev,op.after.rev),0);
  const ordered=[...changes].sort((a,b)=>latest(b)-latest(a)||b.created_at-a.created_at||b.id.localeCompare(a.id));

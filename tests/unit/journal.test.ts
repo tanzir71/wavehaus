@@ -31,6 +31,7 @@ describe('the batch undo journal',()=>{
  });
  it('refuses expired or previously undone actions',()=>{
   const action=change('one',row(1),row(2));expect(()=>undoPlan([{...action,created_at:now-31*86400000}],new Map(),now)).toThrow('30 days');expect(()=>undoPlan([{...action,undone_at:now}],new Map(),now)).toThrow('already undone');
+  expect(()=>undoPlan([{...action,undoable:0}],new Map(),now)).toThrow('cannot be undone');
  });
  it('reverses five hundred metadata changes as a single bounded plan',()=>{
   const before=Array.from({length:500},(_,i)=>({...row(i+1),id:String(i),lyrics:''})),after=before.map((r,i)=>({...r,title:'Renamed '+i,rev:1000+i}));

@@ -51,6 +51,8 @@ audio element, supplied a real generated 512 px PNG to Media Session and reporte
 no Chromium installability errors or page errors. Its Updates screen reported
 v0.3.0.
 
+The matching main-branch CI run (45220285649) also passed.
+
 Published SHA-256 digests:
 
 - Shared hosting: `526173f3fc1ccc768e6e1d0b3f5182d6f2aa7ffc2ca7b740225b8e17e3408c39`.

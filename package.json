@@ -21,6 +21,7 @@
     "test:media-offload": "node scripts/test-media-offload.mjs",
     "test:migrations": "node scripts/test-migrations.mjs",
     "test:migrations:worker": "node scripts/test-migrations-worker.mjs",
+    "test:journal": "node scripts/test-journal.mjs",
     "e2e": "playwright test",
     "package": "node scripts/package.mjs",
     "preview": "node scripts/serve.mjs"

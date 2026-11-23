@@ -32,6 +32,7 @@ jobs:
       - run: npm run test:media-offload
       - run: npm run test:migrations
       - run: npm run test:migrations:worker
+      - run: npm run test:journal
       - run: npm run test:php
         env:
           RUN_LARGE_UPLOAD: '1'
