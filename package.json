@@ -1,6 +1,6 @@
 {
   "name": "wavehaus",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -21,6 +21,9 @@
     "test:media-offload": "node scripts/test-media-offload.mjs",
     "test:migrations": "node scripts/test-migrations.mjs",
     "test:migrations:worker": "node scripts/test-migrations-worker.mjs",
+    "test:journal": "node scripts/test-journal.mjs",
+    "test:journal:php": "node scripts/test-journal.mjs php",
+    "test:journal:demo": "vitest run --config vitest.journal.config.ts",
     "e2e": "playwright test",
     "package": "node scripts/package.mjs",
     "preview": "node scripts/serve.mjs"

@@ -5,6 +5,7 @@ import { ApiError,cookie,fail,json } from './http';
 import type { Env } from './types';
 import { APP_BASE,relativePath } from './deployment';
 import { UploadError } from '../../shared/upload-input';
+import { JournalConflict } from '../../shared/journal';
 import { serveMedia } from './media';
 const security={
  'X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','Permissions-Policy':'camera=(self)',
@@ -28,6 +29,6 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
    const asset=new URL(request.url);asset.pathname=path;response=await env.ASSETS.fetch(new Request(asset,request));
    if(response.status===404&&!/\/[^/]+\.[^/]+$/.test(path)){asset.pathname='/index.html';response=await env.ASSETS.fetch(new Request(asset,request));}
   }else response=json({error:{code:'not_found',message:'Not found.'}},404);
- }catch(error){if(error instanceof ApiError||error instanceof UploadError){const retry=error instanceof ApiError?error.retryAfter:undefined;response=json({error:{code:error.code,message:error.message,...(retry?{retryAfter:retry}:{})}},error.status,retry?{'Retry-After':String(retry)}:undefined);}else{console.error('Wavehaus request failed',error instanceof Error?error.name:'Error');response=json({error:{code:'internal',message:'The server could not complete this request. Check its error log.'}},500);}}
+ }catch(error){if(error instanceof ApiError||error instanceof UploadError){const retry=error instanceof ApiError?error.retryAfter:undefined;response=json({error:{code:error.code,message:error.message,...(retry?{retryAfter:retry}:{}),...(error instanceof JournalConflict?{conflicts:error.conflicts}:{})}},error.status,retry?{'Retry-After':String(retry)}:undefined);}else{console.error('Wavehaus request failed',error instanceof Error?error.name:'Error');response=json({error:{code:'internal',message:'The server could not complete this request. Check its error log.'}},500);}}
  const headers=new Headers(response.headers);for(const [key,value]of Object.entries(security))headers.set(key,value);const raw=refreshedCookie(request);if(raw&&!headers.has('Set-Cookie'))headers.set('Set-Cookie',cookie(raw));if(new URL(request.url).pathname.startsWith('/api/'))headers.set('Cache-Control','no-store');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }};

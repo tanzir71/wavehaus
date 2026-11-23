@@ -1,5 +1,7 @@
 # Wavehaus implementation
 
+Owner instruction, 24 Nov 2026: finish implementation without further testing. CI now builds release packages and Pages only. Existing test files and historical results are retained; no further automated, browser or physical-device tests are requested.
+
 Source of truth: the unmodified files in `/handover`.
 
 ## Milestones
@@ -8,8 +10,9 @@ Source of truth: the unmodified files in `/handover`.
 - M1 — Shipped: PR #2 merged, tag/release `v0.1.0`, both server archives published and Pages green. Settings, Security and pairing were checked on the deployed preview.
 - M2 — Shipped: PR #3 merged, tag/release `v0.2.0`, both archives published, CI and Pages green. A real file upload, private album and playback were checked on the deployed preview.
 - Landing correction — Shipped: PR #4, v0.2.1 and Pages verified at 412 and 1920 px. See `landing-fix-verification.md`.
-- M3 — In progress: playback engine, queue, persistence/plays, Media Session and core screens.
-- M4–M10 — Pending, in the order defined in `/handover/TASKS.md`.
+- M3 — Shipped: PR #5, tag/release `v0.3.0`, PR CI, Pages and release checks green. Queue restoration, generated Media Session artwork and installability were checked on the live preview.
+- M4 — Implemented: organiser rules, persistent import review, bulk metadata and rename previews, artwork, album merge/split, track/album privacy and guarded Undo. Publishing v0.4.0.
+- M5–M10 — Pending, in the order defined in `/handover/TASKS.md`.
 
 ## Verification boundaries
 
@@ -34,7 +37,7 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 ## Remaining acceptance
 
 - Physical Brave/Chrome/iPhone screen-lock and OS share-target checks remain unverified; viewport emulation does not establish those results.
-- M3–M10 remain pending. Production upload and authenticated media endpoints are implemented.
+- M4–M10 remain pending. Production upload and authenticated media endpoints are implemented.
 - The 23 November scope correction removes the visitor website and anonymous media access. Production builds default to `/` and support `APP_BASE`; Pages retains `/wavehaus/app/`.
 
 ## M1 verification

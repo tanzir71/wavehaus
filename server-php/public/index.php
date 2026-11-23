@@ -13,6 +13,9 @@ require_once $lib.'/media.php';
 require_once $lib.'/uploads.php';
 require_once $lib.'/art.php';
 require_once $lib.'/playback.php';
+require_once $lib.'/journal.php';
+require_once $lib.'/metadata.php';
+require_once $lib.'/visibility.php';
 require_once $lib.'/router.php';
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
@@ -41,5 +44,5 @@ try {
         header('Content-Type: text/html; charset=utf-8');header('Cache-Control: no-cache');if($method!=='HEAD')readfile($app.'/index.html');exit;
     }
     fail('not_found','Not found.',404);
-} catch(ApiException $error){if($error->retryAfter!==null)header('Retry-After: '.$error->retryAfter);reply(['error'=>['code'=>$error->errorCode,'message'=>$error->getMessage(),...($error->retryAfter!==null?['retryAfter'=>$error->retryAfter]:[])]],$error->getCode());}
+} catch(ApiException $error){if($error->retryAfter!==null)header('Retry-After: '.$error->retryAfter);reply(['error'=>['code'=>$error->errorCode,'message'=>$error->getMessage(),...($error->retryAfter!==null?['retryAfter'=>$error->retryAfter]:[]),...($error->conflicts!==null?['conflicts'=>$error->conflicts]:[])]],$error->getCode());}
 catch(Throwable $error){error_log('Wavehaus: '.get_class($error).' code '.$error->getCode().' at '.basename($error->getFile()).':'.$error->getLine());reply(['error'=>['code'=>'internal','message'=>'The server could not complete this request. Check its error log.']],500);}

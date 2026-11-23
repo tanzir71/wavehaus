@@ -36,9 +36,27 @@ Local evidence:
   shared range contract. The first CI run passed the API and browser server checks through actual
   Apache `mod_xsendfile`, including byte ranges and HEAD; see `media-offload.md` for host configuration and the LiteSpeed limit.
 
-Packaging and the full final CI run are checked before tagging the release.
-The detached Worker archive is type-checked independently of the repository's
-frontend source. Both archives are checked for safe redeploy behavior.
+The final PR CI run (45218433586) passed, including both 300 MiB resumable
+uploads, actual Apache offload, package/redeploy checks and 26 Pages browser
+checks. Six server-specific Pages skips are exercised by the backend runners.
+The detached Worker archive type-check and both safe redeploy checks passed.
+Browser timing runs sequentially; the probe counts distinct sources because
+Chromium may emit `playing` more than once per source. The footer check waits
+for the single End-key scroll to finish before measuring its bottom padding.
+
+PR #5 merged as `379fc9659b6f44ce790ed8beca01265810a47331`. Tag `v0.3.0`
+has two published server ZIPs. Pages (45220285373) and Release (45220354609)
+passed. The live preview retained manual queue order after reload, played on one
+audio element, supplied a real generated 512 px PNG to Media Session and reported
+no Chromium installability errors or page errors. Its Updates screen reported
+v0.3.0.
+
+The matching main-branch CI run (45220285649) also passed.
+
+Published SHA-256 digests:
+
+- Shared hosting: `526173f3fc1ccc768e6e1d0b3f5182d6f2aa7ffc2ca7b740225b8e17e3408c39`.
+- Worker: `662fec1e1b4acb5a336e22bd4b8a49f480509eabe51eceea514cdc205fdf6287`.
 
 Physical Android Brave/Chrome screen-lock checks, iPhone checks and a real
 LiteSpeed context are unverified. These remain explicit device/host checks.

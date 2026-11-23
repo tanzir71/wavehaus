@@ -10,6 +10,9 @@ function route_request(PDO $db,string $path,string $method): never {
     if($path==='/api/config'&&$method==='GET'){$cfg=settings($db);reply(['serverName'=>$cfg['server_name'],'registrationMode'=>$cfg['registration_mode'],'maxChunkBytes'=>max_chunk_bytes(),'maxFileBytes'=>$cfg['max_file_bytes'],'powDifficulty'=>$cfg['pow_difficulty'],'features'=>['demo'=>false,'uploads'=>true],'requirements'=>['php'=>PHP_VERSION,'pdoSqlite'=>extension_loaded('pdo_sqlite'),'fileinfo'=>extension_loaded('fileinfo'),'mbstring'=>extension_loaded('mbstring'),'openssl'=>extension_loaded('openssl')]]);}
     if(auth_routes($db,$path,$method))exit;
     $auth=current_auth($db);
+    if(journal_routes($db,$auth,$path,$method))exit;
+    if(metadata_routes($db,$auth,$path,$method))exit;
+    if(visibility_routes($db,$auth,$path,$method))exit;
     if(uploads_routes($db,$auth,$path,$method)||artwork_routes($db,$auth,$path,$method)||library_routes($db,$auth,$path,$method)||playback_routes($db,$auth,$path,$method))exit;
     if($path==='/api/admin/settings'){
         require_admin($auth);

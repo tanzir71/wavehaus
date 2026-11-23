@@ -7,9 +7,11 @@ import { user,authStatus,loadSession } from './session';
 export { user } from './session';
 const cache=createStore(`wh-library-${api.demo?'demo':'http'}`,'library');
 export const library=signal<Library>(emptyLibrary()),busy=signal(true),notice=signal('');
+export const undoAction=signal<string|null>(null);
 let rev=0,syncing:Promise<void>|null=null,syncEpoch=0,timer:ReturnType<typeof setTimeout>;
-export function toast(message:string){notice.value=message;clearTimeout(timer);timer=setTimeout(()=>{notice.value='';},6500);}
-export function clearLibrary(){syncEpoch++;syncing=null;rev=0;library.value=emptyLibrary();}
+export function toast(message:string){undoAction.value=null;notice.value=message;clearTimeout(timer);timer=setTimeout(()=>{notice.value='';undoAction.value=null;},6500);}
+export function offerUndo(message:string,changeId:string|null){toast(message);undoAction.value=changeId;}
+export function clearLibrary(){syncEpoch++;syncing=null;rev=0;library.value=emptyLibrary();undoAction.value=null;}
 export function insertUpload(track:Track,album:Album){if(track.owner_id!==user.value?.id)return;const replace=<T extends {id:string}>(rows:T[],row:T)=>[...rows.filter(item=>item.id!==row.id),row];library.value={...library.value,tracks:replace(library.value.tracks,track),albums:replace(library.value.albums,album)};}
 export async function sync(){if(!user.value)return;if(syncing)return syncing;const epoch=syncEpoch,userId=user.value.id;const operation=(async()=>{
  let more=true;while(more){const delta=await api.request<LibraryDelta>(`/api/library?since=${rev}`),next={...library.value};
@@ -19,7 +21,8 @@ export async function sync(){if(!user.value)return;if(syncing)return syncing;con
    (next[key] as unknown[])=Array.from(map.values());
   }
   for(const key of ['tracks','albums','playlists'] as const)next[key]=next[key].filter(r=>!delta.hidden[key].includes(r.id)) as never;
-  const hidden=delta.hidden.tracks;if(hidden.length)navigator.serviceWorker?.controller?.postMessage({type:'PURGE_TRACKS',ids:hidden});
+  const hidden=[...delta.hidden.tracks,...delta.items.tracks.filter(row=>row.deleted).map(row=>row.id)];if(hidden.length){navigator.serviceWorker?.controller?.postMessage({type:'PURGE_TRACKS',ids:hidden});next.playlistItems=next.playlistItems.filter(row=>!hidden.includes(row.track_id));next.likes=next.likes.filter(row=>!hidden.includes(row.track_id));next.moments=next.moments.filter(row=>!hidden.includes(row.track_id));}
+  if(!delta.more){const usedArtists=new Set([...next.tracks,...next.albums].map(row=>row.artist_id));next.artists=next.artists.filter(row=>usedArtists.has(row.id));}
   library.value=next;rev=delta.rev;more=delta.more;
  }if(epoch===syncEpoch&&user.value?.id===userId)await set(`user:${userId}`,{rev,library:library.value},cache);
  })();syncing=operation;operation.finally(()=>{if(syncing===operation)syncing=null;}).catch(()=>{});return operation;}

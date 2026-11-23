@@ -1,0 +1,2 @@
+import {defineConfig} from 'vitest/config';
+export default defineConfig({test:{include:['tests/api/demo-journal.test.ts'],environment:'node',testTimeout:90000,hookTimeout:120000}});

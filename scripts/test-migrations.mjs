@@ -9,7 +9,7 @@ try{
  const {binary,args}=phpCommand();let fresh;
  for(const [upgrade,legacy]of [[false,false],[true,false],[false,true],[true,true]]){
   const result=spawnSync(binary,[...args,'tests/package/migrations.php'],{windowsHide:true,encoding:'utf8',input:JSON.stringify({directory:resolve(temporary,`${upgrade}-${legacy}`),upgrade,legacy,m1,latest:resolve('migrations')})});
-  if(result.status!==0)throw new Error(result.stderr);const value=JSON.parse(result.stdout);if(!fresh)fresh=value.shape;assert.deepEqual(value.shape,fresh);assert.equal(value.migrations,4);assert.equal(value.fkEnabled,1);assert.deepEqual(value.foreignKeys,[]);assert.equal(value.homepageSettings,0);assert(!value.shape.showcase&&!value.shape.showcase_stats);assert(!value.shape.albums.columns.some(column=>column.name==='allow_homepage'));
+  if(result.status!==0)throw new Error(result.stderr);const value=JSON.parse(result.stdout);if(!fresh)fresh=value.shape;assert.deepEqual(value.shape,fresh);assert.equal(value.migrations,6);assert.equal(value.fkEnabled,1);assert.deepEqual(value.foreignKeys,[]);assert.equal(value.homepageSettings,0);assert(!value.shape.showcase&&!value.shape.showcase_stats);assert(!value.shape.albums.columns.some(column=>column.name==='allow_homepage'));
   if(upgrade){assert.equal(value.track.title,'Preserved track');assert.equal(value.album.title,'Preserved album');assert.equal(value.track.album_id,value.album.id);assert.equal(value.track.visibility,'private');assert.equal(value.setting,'"Preserved settings"');}
  }
  console.log('Fresh and M1-upgraded schemas match. Album/track/settings data and foreign keys survive native DROP COLUMN and the old-SQLite rebuild; repeated migration is idempotent.');

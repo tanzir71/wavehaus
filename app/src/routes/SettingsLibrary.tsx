@@ -1,0 +1,22 @@
+import {useEffect,useState} from 'preact/hooks';
+import {api} from '@backend';
+import {json} from '../api/types';
+import {defaultRules,type RuleSettings} from '../../../shared/library-rules';
+import {accountSettings,user} from '../library/session';
+import {toast} from '../library/store';
+import {undoChange} from '../library/edits';
+import {beginBusy} from '../ui/busy';
+const ruleLabels:Record<keyof RuleSettings,[string,string]>={tags:['Tags first','Use existing title, artist and album tags.'],folders:['Folder names next','Recognise artist, album, year and disc folders.'],filenames:['Filename patterns','Fill missing fields from track and artist names.'],stripJunk:['Strip junk','Remove file extensions, official-audio labels and duplicate suffixes.'],titleCase:['Title Case','Tidy all-uppercase or lowercase names; keep inner capitals.'],groupAlbums:['Group into albums','Group tracks by album artist and album title.'],variousArtists:['Various Artists','Group compilations with more than three artists.'],mergeExisting:['Merge with existing albums','Attach to matching albums that belong to you.'],numberTracks:['Number missing tracks','Use filename order within each album and disc.'],recordings:['Voice memos and recordings','Put recordings in Recordings with their recorded date.']};
+export function LibraryRules(){
+ const [rules,setRules]=useState<RuleSettings>({...defaultRules,...accountSettings.value.library_rules as Partial<RuleSettings>}),[saving,setSaving]=useState(false),[error,setError]=useState('');const editable=['owner','admin'].includes(user.value?.role||'');
+ async function save(){setSaving(true);setError('');const finish=beginBusy();try{await api.request('/api/admin/settings',json({library_rules:rules},'PATCH'));accountSettings.value={...accountSettings.value,library_rules:rules};toast('Library rules saved. Future imports use these rules.');}catch(error){setError((error as Error).message);}finally{setSaving(false);finish();}}
+ return <section data-busy={saving}><h2>Library rules</h2><p>Tags → folders → filenames. Changes apply to future imports; existing music keeps its metadata.</p>{Object.entries(ruleLabels).map(([key,[title,description]])=><div class="setting-row"><div><strong>{title}</strong><p>{description}</p></div><button role="switch" class="switch" aria-label={title} aria-checked={rules[key as keyof RuleSettings]} disabled={!editable||saving} onClick={()=>setRules({...rules,[key]:!rules[key as keyof RuleSettings]})}><span/></button></div>)}{error&&<p role="alert">{error}</p>}{editable?<button class="button primary" disabled={saving} onClick={()=>void save()}>{saving?'Saving…':'Save rules'}</button>:<p class="muted">The server owner manages these rules.</p>}</section>;
+}
+interface Change {id:string;summary:string;session_label:string;created_at:number;undone_at:number|null;undoAvailable:boolean}
+export function Activity(){
+ const [items,setItems]=useState<Change[]>([]),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState('');
+ const load=async(more=false)=>{setLoading(true);setError('');try{const page=await api.request<{items:Change[];nextCursor:string|null}>('/api/changes?limit=50'+(more&&cursor?'&cursor='+encodeURIComponent(cursor):''));setItems(previous=>more?[...previous,...page.items]:page.items);setCursor(page.nextCursor);}catch(error){setError((error as Error).message);}finally{setLoading(false);}};
+ useEffect(()=>{void load();},[]);
+ const undo=async(id:string)=>{setLoading(true);setError('');try{await undoChange(id);await load();}catch(error){setError((error as Error).message);}finally{setLoading(false);}};
+ return <section data-busy={loading}><h2>Activity</h2><p>Your library changes, with Undo for 30 days.</p>{items.map(item=><article class="setting-row" key={item.id}><div><strong>{item.summary}</strong><p>{item.session_label} · {new Date(item.created_at).toLocaleString()}{item.undone_at?' · Undone':''}</p></div>{item.undoAvailable&&<button class="button" aria-label={'Undo '+item.summary} disabled={loading} onClick={()=>void undo(item.id)}>Undo</button>}</article>)}{error&&<p role="alert">{error}</p>}{!items.length&&!loading&&<p class="muted">Your library changes will appear here.</p>}{cursor&&<button class="button" disabled={loading} onClick={()=>void load(true)}>Load more activity</button>}{loading&&<p role="status">Loading activity…</p>}</section>;
+}

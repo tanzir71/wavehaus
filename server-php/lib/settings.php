@@ -11,6 +11,7 @@ function save_settings(PDO $db, array $values): void {
         if (!in_array($key, $allowed, true)) fail('invalid_setting', 'Unknown setting: ' . $key);
         if ($key === 'registration_mode' && !in_array($value, ['closed','invite','request','open'], true)) fail('invalid_setting', 'Choose a registration mode.');
         if ($key === 'default_visibility' && $value !== 'private') fail('invalid_setting', 'New uploads are private by default.');
+        if($key==='library_rules'){if(!is_array($value)||count($value)&&array_is_list($value))fail('validation','Library rules must be an object.');foreach($value as $rule=>$flag)if(!in_array($rule,['tags','folders','filenames','stripJunk','titleCase','groupAlbums','variousArtists','mergeExisting','numberTracks','recordings'],true)||!is_bool($flag))fail('validation','Use known library rules with true or false.');}
         execute($db, 'INSERT INTO settings(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at', [$key, json_encode($value, JSON_THROW_ON_ERROR), now_ms()]);
     }
 }
