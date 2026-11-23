@@ -1,0 +1,34 @@
+import { signal } from '@preact/signals';
+import { get,set } from 'idb-keyval';
+import { api } from '@backend';
+import { json,type Track } from '../api/types';
+// No UI imports. This element survives every route and component change.
+export const audio=document.createElement('audio');audio.preload='auto';audio.setAttribute('playsinline','');audio.id='wavehaus-audio';audio.hidden=true;document.body.append(audio);
+export const state=signal<'paused'|'playing'|'loading'|'error'>('paused'),current=signal<Track|null>(null),positionMs=signal(0),bufferedMs=signal(0),queue=signal<Track[]>([]),queueIndex=signal(0),repeat=signal<'off'|'all'|'one'>('off'),shuffle=signal(false),autoplay=signal(true),engineError=signal('');
+let pendingSeek=0,retry=0,recoveryTimer:ReturnType<typeof setTimeout>,sleepTimer:ReturnType<typeof setTimeout>|undefined,lastPosition=0;
+const catchPlay=(p:Promise<void>)=>{p.catch(e=>{state.value='paused';engineError.value=e.name==='NotAllowedError'?'Tap Play to start listening.':'Playback could not start. Try again.';});};
+function positionState(){if(!('mediaSession'in navigator)||!audio.duration||!Number.isFinite(audio.duration))return;try{navigator.mediaSession.setPositionState({duration:audio.duration,playbackRate:audio.playbackRate,position:Math.min(audio.duration,Math.max(0,audio.currentTime))});}catch{/* Browser does not support position state. */}}
+function metadata(t:Track){if(!('mediaSession'in navigator))return;const album={id:t.album_id,rev:t.rev,art_source:'generated'};navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist_name,album:t.album_title,artwork:[{src:new URL(api.artUrl(album as never,600),location.href).href,sizes:'512x512',type:'image/png'}]});}
+function load(t:Track,at=0,playNow=true){current.value=t;pendingSeek=at/1000;positionMs.value=at;retry=0;engineError.value='';state.value=playNow?'loading':'paused';audio.src=t.id==='background-test'?`${import.meta.env.BASE_URL}chime-test.wav`:api.mediaUrl(t);metadata(t);if(playNow)catchPlay(audio.play());else audio.load();persist();}
+export function play(tracks:Track[]|Track,at=0){if('audioSession'in navigator)(navigator as Navigator&{audioSession:{type:string}}).audioSession.type='playback';if(Array.isArray(tracks)){if(!tracks.length)return;queue.value=tracks;queueIndex.value=0;load(tracks[0],at);}else{const index=queue.value.findIndex(t=>t.id===tracks.id);if(index>=0)queueIndex.value=index;else{queue.value=[tracks];queueIndex.value=0;}load(tracks,at);}}
+export function resume(){if(!current.value)return;catchPlay(audio.play());}
+export function pause(){audio.pause();persist();}
+export const toggle=()=>state.value==='playing'?pause():resume();
+export function seek(ms:number){if(!current.value)return;const next=Math.min(current.value.duration_ms,Math.max(0,ms));positionMs.value=next;if(audio.readyState>=1)audio.currentTime=next/1000;else pendingSeek=next/1000;positionState();}
+export function next(manual=true){if(!queue.value.length)return;if(!manual&&repeat.value==='one'){seek(0);catchPlay(audio.play());return;}const index=queueIndex.value+1;if(index>=queue.value.length){if(repeat.value==='all'){queueIndex.value=0;load(queue.value[0]);}else pause();return;}queueIndex.value=index;load(queue.value[index]);}
+export function prev(){if(audio.currentTime>3){seek(0);return;}queueIndex.value=Math.max(0,queueIndex.value-1);const t=queue.value[queueIndex.value];if(t)load(t);}
+export function enqueue(t:Track){const q=[...queue.value];q.splice(queueIndex.value+1,0,t);queue.value=q;persist();}
+export function sleep(minutes:number|'endOfTrack'|null){clearTimeout(sleepTimer);if(minutes==='endOfTrack'){audio.addEventListener('ended',pause,{once:true});}else if(minutes)sleepTimer=setTimeout(pause,minutes*60000);}
+export function setVolume(value:number){audio.volume=Math.min(1,Math.max(0,value));}
+function snapshot(){return {queue:queue.value.map(t=>t.id),index:queueIndex.value,positionMs:positionMs.value,shuffle:shuffle.value,repeat:repeat.value,autoplay:autoplay.value,updatedAt:Date.now()};}
+function persist(){set(`wh-player-${api.demo?'demo':'http'}`,snapshot()).catch(()=>{});api.request('/api/player-state',json(snapshot(),'PUT')).catch(()=>{});}
+export async function restore(tracks:Track[]){const saved=await get<ReturnType<typeof snapshot>>(`wh-player-${api.demo?'demo':'http'}`)||await api.request<ReturnType<typeof snapshot>|null>('/api/player-state');if(!saved)return;queue.value=saved.queue.map(id=>tracks.find(t=>t.id===id)).filter((t):t is Track=>!!t);queueIndex.value=Math.min(saved.index,Math.max(0,queue.value.length-1));repeat.value=saved.repeat;shuffle.value=saved.shuffle;autoplay.value=saved.autoplay;const t=queue.value[queueIndex.value];if(t)load(t,saved.positionMs,false);}
+audio.addEventListener('ended',()=>{next(false);}); // Synchronous src + play, no metadata fetch or await.
+audio.addEventListener('loadedmetadata',()=>{if(pendingSeek){audio.currentTime=pendingSeek;pendingSeek=0;}positionState();});
+audio.addEventListener('timeupdate',()=>{positionMs.value=audio.currentTime*1000;bufferedMs.value=audio.buffered.length?audio.buffered.end(audio.buffered.length-1)*1000:0;if(Date.now()-lastPosition>5000){lastPosition=Date.now();positionState();set(`wh-player-${api.demo?'demo':'http'}`,snapshot()).catch(()=>{});}});
+for(const event of ['play','pause','seeked','ratechange'] as const)audio.addEventListener(event,()=>{if(event==='play'){state.value='playing';engineError.value='';}if(event==='pause')state.value='paused';if('mediaSession'in navigator)navigator.mediaSession.playbackState=audio.paused?'paused':'playing';positionState();});
+function recover(){if(retry>=4){state.value='error';engineError.value='Playback stopped. Check your connection, then tap Play.';return;}const at=audio.currentTime;recoveryTimer=setTimeout(()=>{audio.src=audio.src;pendingSeek=at;catchPlay(audio.play());},1000*2**retry++);}
+audio.addEventListener('error',()=>{if(audio.error?.code===2)recover();else{state.value='error';engineError.value='This file cannot play on this device.';}});
+audio.addEventListener('stalled',()=>{clearTimeout(recoveryTimer);recoveryTimer=setTimeout(recover,8000);});audio.addEventListener('playing',()=>{clearTimeout(recoveryTimer);retry=0;});
+addEventListener('online',()=>{if(state.value==='error')recover();});addEventListener('pagehide',persist);
+if('mediaSession'in navigator){const handlers:Partial<Record<MediaSessionAction,MediaSessionActionHandler>>={play:resume,pause,stop:()=>{pause();seek(0);},previoustrack:prev,nexttrack:()=>next(),seekto:d=>seek((d.seekTime||0)*1000),seekbackward:d=>seek(positionMs.value-(d.seekOffset||10)*1000),seekforward:d=>seek(positionMs.value+(d.seekOffset||10)*1000)};for(const [action,handler]of Object.entries(handlers))try{navigator.mediaSession.setActionHandler(action as MediaSessionAction,handler!);}catch{/* Older browser. */}}

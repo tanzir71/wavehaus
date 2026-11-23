@@ -1,0 +1,37 @@
+{
+  "name": "wavehaus",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "predev": "node scripts/make-chime.mjs",
+    "predev:demo": "node scripts/make-chime.mjs",
+    "predev:worker": "node scripts/make-chime.mjs",
+    "dev": "node scripts/dev.mjs php",
+    "dev:worker": "node scripts/dev.mjs worker",
+    "dev:demo": "vite --config app/vite.config.ts --mode demo --host 127.0.0.1",
+    "build": "node scripts/build.mjs",
+    "build:pages": "node scripts/build.mjs pages",
+    "lint": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:api": "vitest run --config vitest.api.config.ts",
+    "e2e": "playwright test",
+    "package": "node scripts/package.mjs",
+    "preview": "node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "@preact/signals": "2.11.4",
+    "idb-keyval": "6.3.0",
+    "minisearch": "7.2.0",
+    "music-metadata": "12.8.1",
+    "preact": "11.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "sharp": "0.35.5",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "4.1.12"
+  }
+}

@@ -1,0 +1,3 @@
+export const platform=(): 'android'|'ios'|'desktop'=>/android/i.test(navigator.userAgent)?'android':/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)?'ios':'desktop';
+export const isBrave=async()=>!!(navigator as Navigator&{brave?:{isBrave():Promise<boolean>}}).brave&&await (navigator as Navigator&{brave:{isBrave():Promise<boolean>}}).brave.isBrave();
+export const openInBraveUrl=(url=location.href)=>platform()==='android'?`intent://${url.replace(/^https?:\/\//,'')}#Intent;scheme=https;package=com.brave.browser;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.brave.browser')};end`:`brave://open-url?url=${encodeURIComponent(url)}`;

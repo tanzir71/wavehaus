@@ -1,0 +1,97 @@
+{
+  "tool": "Lighthouse 13.6.0",
+  "profile": "default mobile, local Pages build with gzip",
+  "date": "2026-11-23",
+  "scores": {
+    "landing": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-shared-hosting": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-cloudflare": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-local": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-upload-organise": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-private-public": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-members": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-updating": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-backups": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "docs-assistants": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "background-play": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "self-hosted-spotify-alternative": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "changelog": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "privacy": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    }
+  }
+}
