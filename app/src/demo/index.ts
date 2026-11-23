@@ -19,7 +19,7 @@ export async function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise
  if(path.startsWith('/demo-media/')||path.startsWith('/media/')){const state=(await readState())!;if(!demoSignedIn(state))fail('unauthenticated','Sign in to continue.',401);const track=state.tracks.find(t=>t.id===path.split('/')[2]&&!t.deleted);if(track&&track.owner_id!==state.user.id&&track.visibility!=='public')fail('forbidden','This track is private.',403);const blob=track?await getBlob(`audio-${track.id}`):null;return blob&&track?rangeResponse(blob,request,track.mime,`"${track.sha256}"`):response({error:{code:'not_found',message:'Track not found'}},404);}
  if(!['GET','HEAD'].includes(method)&&request.headers.get('X-Wavehaus')!=='1')return response({error:{code:'csrf',message:'Missing X-Wavehaus header.'}},403);
  const body=()=>request.json();const s=(await readState())!;
- if(path==='/api/health')return response({ok:true,version:'0.5.0',schema:6,backend:'demo',needsSetup:false});
+ if(path==='/api/health')return response({ok:true,version:'0.6.0',schema:7,backend:'demo',needsSetup:false});
  if(path==='/api/config')return response({serverName:s.settings.server_name,registrationMode:s.settings.registration_mode,maxChunkBytes:8*1024*1024,maxFileBytes:2*1024**3,powDifficulty:18,features:{demo:true,uploads:true}});
  const authentication=await demoAuth(request,path);if(authentication)return authentication;
  if(!demoSignedIn(s))fail('unauthenticated','Sign in to continue.',401);
@@ -27,6 +27,7 @@ export async function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise
  if(path==='/api/tracks'&&['PATCH','DELETE'].includes(method)){const{demoEdits}=await import('./edits');return (await demoEdits(request,path))!;}
  if(path.startsWith('/api/albums/')&&(method==='PATCH'||path==='/api/albums/merge'&&method==='POST')){const{demoEdits}=await import('./edits');const result=await demoEdits(request,path);if(result)return result;}
  if(path==='/api/visibility'){const{demoVisibility}=await import('./visibility');const result=await demoVisibility(request,path);if(result)return result;}
+ if(path.startsWith('/api/playlists')){const{demoPlaylists}=await import('./playlists');const result=await demoPlaylists(request,path);if(result)return result;}
  const artwork=path.match(/^\/(?:art|demo-art)\/([0-9A-HJKMNP-TV-Z]{26})\/(96\.webp|600\.webp|generated-512\.png)$/);if(artwork&&['GET','HEAD'].includes(method)){const album=s.albums.find(a=>a.id===artwork[1]&&!a.deleted);if(!album)fail('not_found','Album not found.',404);if(album.owner_id!==s.user.id&&album.visibility!=='public')fail('forbidden','This album is private.',403);const blob=await getArt(artwork[1],artwork[2],album.art_key??null);return blob?new Response(method==='HEAD'?null:blob,{headers:{'Content-Type':blob.type,'Content-Length':String(blob.size),'Cache-Control':'private, max-age=31536000, immutable'}}):response({error:{code:'not_found',message:'Artwork has not arrived yet.'}},404);}
  if(path==='/api/library'){
   const since=Number(url.searchParams.get('since')||0);if(!Number.isSafeInteger(since)||since<0)fail('invalid_cursor','Invalid library cursor.');

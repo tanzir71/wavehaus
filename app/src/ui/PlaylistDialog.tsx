@@ -1,0 +1,11 @@
+import {useState} from 'preact/hooks';
+import {Dialog} from './Dialog';
+import {library} from '../library/store';
+import {user} from '../library/session';
+import {createPlaylist,addToPlaylist} from '../library/playlists';
+import {navigate} from './router';
+export default function PlaylistDialog({trackIds=[],onClose}:{trackIds?:string[];onClose():void}){
+ const [creating,setCreating]=useState(!trackIds.length),[name,setName]=useState(''),[description,setDescription]=useState(''),[working,setWorking]=useState(false),[error,setError]=useState('');
+ const add=async(id:string)=>{setWorking(true);setError('');try{await addToPlaylist(id,trackIds);onClose();}catch(error){setError((error as Error).message);}finally{setWorking(false);}};
+ return <Dialog title={creating?'New playlist':'Add to playlist'} onClose={()=>{if(!working)onClose();}}><div data-busy={working}>{!creating?<><div class="dialog-actions">{library.value.playlists.filter(row=>row.owner_id===user.value?.id&&row.kind!=='smart').map(row=><button class="button" disabled={working} onClick={()=>void add(row.id)}>{row.name}</button>)}</div><button class="button primary" disabled={working} onClick={()=>setCreating(true)}>Create playlist</button></>:<form class="auth-form" onSubmit={async event=>{event.preventDefault();setWorking(true);setError('');try{const created=await createPlaylist(name,description);if(trackIds.length)await addToPlaylist(created.playlistId,trackIds,created.changeId||undefined);onClose();navigate('/playlist/'+created.playlistId);}catch(error){setError((error as Error).message);}finally{setWorking(false);}}}><label class="auth-field"><span>Name</span><input aria-label="Playlist name" required maxLength={200} autoFocus value={name} onInput={event=>setName(event.currentTarget.value)}/></label><label class="auth-field"><span>Description</span><textarea aria-label="Playlist description" maxLength={2000} value={description} onInput={event=>setDescription(event.currentTarget.value)}/></label><p class="muted">New playlists are private.</p><button class="button primary" disabled={working}>{working?'Creating…':'Create playlist'}</button></form>}{error&&<p role="alert" class="form-error">{error}</p>}</div></Dialog>;
+}

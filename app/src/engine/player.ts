@@ -12,7 +12,7 @@ import type { QueueEntry, RepeatMode } from './queue';
 // One persistent playback element. Route changes and HMR never replace it.
 export const audio = (document.getElementById('wavehaus-audio') as HTMLAudioElement | null) || document.createElement('audio');
 audio.id='wavehaus-audio';audio.hidden=true;audio.preload='none';audio.setAttribute('playsinline','');if(!audio.isConnected)document.body.append(audio);
-export const state=signal<PlaybackState>('paused'),current=signal<Track|null>(null),positionMs=signal(0),durationMs=signal(0),bufferedMs=signal(0),queue=signal<Track[]>([]),queueIndex=signal(0),repeat=signal<RepeatMode>('off'),shuffle=signal(false),autoplay=signal(true),engineError=signal(''),interrupted=signal(false),volume=signal(1),unsupportedTracks=signal(new Set<string>()),sleepState=signal<{until:number|null;track:string|null}>({until:null,track:null});
+export const state=signal<PlaybackState>('paused'),current=signal<Track|null>(null),positionMs=signal(0),durationMs=signal(0),bufferedMs=signal(0),queue=signal<Track[]>([]),queueIndex=signal(0),repeat=signal<RepeatMode>('off'),shuffle=signal(false),smartShuffle=signal(false),autoplay=signal(true),engineError=signal(''),interrupted=signal(false),volume=signal(1),unsupportedTracks=signal(new Set<string>()),sleepState=signal<{until:number|null;track:string|null}>({until:null,track:null});
 export const queueSections=signal<{current:QueueEntry|null;manual:QueueEntry[];context:QueueEntry[];automatic:QueueEntry[];label:string;type:string}>({current:null,manual:[],context:[],automatic:[],label:'Your library',type:'library'});
 const media=new NativeMediaSession(api,import.meta.env.BASE_URL);
 const persistence=new PlaybackPersistence(api,import.meta.env.BASE_URL,()=>{engineError.value='Playback is working, but this browser could not save your position.';});
@@ -30,7 +30,7 @@ const engine=new AudioEngine({audio,media,persistence,listening,url:resolvedUrl,
 function publish(){batch(()=>{
  state.value=engine.state;current.value=engine.current;positionMs.value=engine.positionMs;durationMs.value=engine.durationMs;bufferedMs.value=engine.bufferedMs;engineError.value=engine.error;interrupted.value=engine.interrupted;volume.value=engine.volume;
  const sleep=sleepState.peek();if(sleep.until!==engine.sleepUntil||sleep.track!==engine.sleepTrack)sleepState.value={until:engine.sleepUntil,track:engine.sleepTrack};
- if(queueRevision!==engine.queueRevision){queueRevision=engine.queueRevision;const q=engine.queue,timeline=q.timeline;queue.value=timeline.map(e=>e.track);queueIndex.value=Math.max(0,timeline.findIndex(e=>e.key===q.current?.key));repeat.value=q.repeat;shuffle.value=q.shuffle;autoplay.value=q.autoplay;unsupportedTracks.value=new Set(engine.unsupported);queueSections.value={current:q.current,manual:[...q.manual],context:[...q.remaining],automatic:[...q.automatic],label:q.contextLabel,type:q.contextType};}
+ if(queueRevision!==engine.queueRevision){queueRevision=engine.queueRevision;const q=engine.queue,timeline=q.timeline;queue.value=timeline.map(e=>e.track);queueIndex.value=Math.max(0,timeline.findIndex(e=>e.key===q.current?.key));repeat.value=q.repeat;shuffle.value=q.shuffle;smartShuffle.value=q.smartShuffle;autoplay.value=q.autoplay;unsupportedTracks.value=new Set(engine.unsupported);queueSections.value={current:q.current,manual:[...q.manual],context:[...q.remaining],automatic:[...q.automatic],label:q.contextLabel,type:q.contextType};}
 });}
 export function configureUser(userId:string){engine.configure(userId);}
 export function clearPlayer(){engine.configure(null);}
@@ -51,6 +51,7 @@ export const removeQueued=(key:string)=>engine.remove(key);
 export const reorderQueued=(key:string,to:number)=>engine.reorder(key,to);
 export const clearQueue=()=>engine.clearManual();
 export const setShuffle=(value:boolean)=>engine.setShuffle(value);
+export const setSmartShuffle=(value:boolean)=>engine.setSmartShuffle(value);
 export const setRepeat=(value:RepeatMode)=>engine.setRepeat(value);
 export const setAutoplay=(value:boolean)=>engine.setAutoplay(value);
 export const setLoop=(aMs:number,bMs:number|null)=>engine.setLoop(aMs,bMs);
@@ -58,6 +59,9 @@ export const sleep=(minutes:number|'endOfTrack'|null)=>engine.sleep(minutes);
 export const setVolume=(value:number)=>engine.setVolume(value);
 export const playbackSnapshot=()=>engine.snapshot();
 export const endTemporary=(saved:ReturnType<typeof engine.snapshot>)=>engine.endTemporary(saved);
+export const listeningHistory=(since=0)=>listening.recent(since);
+export const setRecommendationSource=(source:(seed:Track,n:number,excluded:string[],lastArtists:string[])=>Promise<Track[]>)=>engine.setRecommendationSource(source);
+export const recentPlayedIds=()=>engine.recentPlayedIds();
 const removeHandlers=media.handlers({play:resume,pause,stop,previoustrack:prev,nexttrack:()=>next(),seekto:d=>{if(d.seekTime!==undefined)seek(d.seekTime*1000,!!d.fastSeek);},seekbackward:d=>seek(positionMs.peek()-(d.seekOffset||10)*1000),seekforward:d=>seek(positionMs.peek()+(d.seekOffset||10)*1000)});
 const online=()=>engine.online(),pagehide=()=>engine.pagehide();addEventListener('online',online);addEventListener('pagehide',pagehide);
 if(import.meta.hot)import.meta.hot.dispose(()=>{removeHandlers();removeEventListener('online',online);removeEventListener('pagehide',pagehide);engine.dispose();});

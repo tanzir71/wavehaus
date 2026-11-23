@@ -8,7 +8,7 @@ Your music, at home. A self-hosted music streaming PWA that installs from the br
 
 The browser demo generates twelve original tracks across three albums. You can play, scrub, browse, like, queue and upload music. Demo uploads and listening data stay in that browser. Clearing site data removes them.
 
-The preview also has sign-in, recovery codes, device pairing and settings. The demo starts as `demo` with initial password `wavehaus-demo`; its accounts and pairing are simulated in that browser. PHP and Worker releases use real secure HTTP-only cookies and support owner setup, recovery and device sessions. Both servers now support resumable uploads, artwork, private library sync and authenticated streaming. Playback hardening continues in M3. See [implementation progress](docs/PROGRESS.md) for remaining milestones and verification boundaries.
+The preview also has sign-in, recovery codes, device pairing and settings. The demo starts as `demo` with initial password `wavehaus-demo`; its accounts and pairing are simulated in that browser. PHP and Worker releases use real secure HTTP-only cookies and support owner setup, recovery and device sessions. Both servers now support resumable uploads, artwork, private library sync and authenticated streaming. The player has persistent queues, background-play guides, radio and smart shuffle. Library search and recommendations run on the device; private playlists support editing, reordering and Undo. See [implementation progress](docs/PROGRESS.md) for remaining milestones and verification boundaries.
 
 ## Run locally
 

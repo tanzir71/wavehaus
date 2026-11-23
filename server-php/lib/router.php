@@ -13,6 +13,7 @@ function route_request(PDO $db,string $path,string $method): never {
     if(journal_routes($db,$auth,$path,$method))exit;
     if(metadata_routes($db,$auth,$path,$method))exit;
     if(visibility_routes($db,$auth,$path,$method))exit;
+    if(playlists_routes($db,$auth,$path,$method))exit;
     if(uploads_routes($db,$auth,$path,$method)||artwork_routes($db,$auth,$path,$method)||library_routes($db,$auth,$path,$method)||playback_routes($db,$auth,$path,$method))exit;
     if($path==='/api/admin/settings'){
         require_admin($auth);

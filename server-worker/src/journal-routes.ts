@@ -13,7 +13,7 @@ async function activity(request:Request,env:Env,auth:Auth){
  const at=match?Number(match[1]):Number.MAX_SAFE_INTEGER,id=match?.[2]||'Z'.repeat(26),budget=8*1024**2;
  const rows=await all<Record<string,unknown>>(env.DB,`WITH limited AS(SELECT c.id,c.user_id,c.actor,c.session_label,c.token_name,c.summary,c.ops,c.created_at,c.undone_at,c.undoable,json_array_length(c.ops)+(SELECT COUNT(*) FROM change_ops o WHERE o.change_id=c.id) AS operation_count,SUM(2048+length(CAST(c.ops AS BLOB))) OVER(ORDER BY c.created_at DESC,c.id DESC) AS _wh_bytes FROM changes c WHERE c.user_id=? AND (c.created_at<? OR(c.created_at=? AND c.id<?)) ORDER BY c.created_at DESC,c.id DESC LIMIT ?) SELECT * FROM limited WHERE _wh_bytes<=? OR id=(SELECT id FROM limited WHERE _wh_bytes>? ORDER BY created_at DESC,id DESC LIMIT 1) ORDER BY created_at DESC,id DESC`,auth.user.id,at,at,id,limit+1,budget,budget);
  const items:Record<string,unknown>[]=[];for(const row of rows){if(items.length>=limit||items.length&&Number(row._wh_bytes)>budget)break;
-  const {_wh_bytes,operation_count,...item}=row;items.push({...item,ops:JSON.parse(String(row.ops)),operationCount:Number(operation_count),undoAvailable:auth.user.role!=='listener'&&row.undone_at===null&&row.undoable===1&&Number(operation_count)>0&&Number(row.created_at)>=Date.now()-30*86400000});
+  const {_wh_bytes,operation_count,...item}=row;items.push({...item,ops:JSON.parse(String(row.ops)),operationCount:Number(operation_count),undoAvailable:row.undone_at===null&&row.undoable===1&&Number(operation_count)>0&&Number(row.created_at)>=Date.now()-30*86400000});
  }
  const last=items.at(-1);return json({items,nextCursor:items.length<rows.length&&last?`${last.created_at}.${last.id}`:null});
 }
@@ -21,7 +21,7 @@ export async function journalRoutes(request:Request,env:Env,auth:Auth,path:strin
  if(path==='/api/changes'&&request.method==='GET')return activity(request,env,auth);
  const single=path.match(/^\/api\/changes\/([0-9A-HJKMNP-TV-Z]{26})\/undo$/),batch=path==='/api/changes/undo';
  if(request.method!=='POST'||!single&&!batch)return null;
- if(auth.user.role==='listener')fail('forbidden','Your account cannot edit library metadata.',403);
+
  const ids=single?[single[1]]:rowIds((await body(request)).ids,'Action IDs'),changes=await readJournalChanges(env,auth,ids),current=await readJournalRows(env,changes.flatMap(change=>change.ops));
  const admin=['owner','admin'].includes(auth.user.role);
  if(!admin&&[...current].some(([key,row])=>!key.startsWith('artists:')&&row.owner_id!==auth.user.id))fail('forbidden','You can only undo changes to your own library.',403);

@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.0 — M6 · 2026-11-24
+
+Find a favourite. Follow the next one.
+
+- MiniSearch runs in a worker with grouped song, album, artist, folder and moment results, recent searches and private/downloaded filters.
+- Library tabs include sorting, album grid/list views, folder collections and playlist creation, editing, deletion and accessible reordering.
+- Private playlists and item changes use guarded 30-day Undo on PHP, Worker and demo, with migration 7 preserving existing playlists.
+- Device-local recommendations provide daily mixes, On Repeat, Rediscover, Fresh uploads and Recently played, plus radio and prepared autoplay excluding the last two hours.
+- Smart shuffle inserts labelled recommendations between groups of five context tracks and survives queue restoration.
+
+Production archives and Pages are built for publication. No dependencies were added; no further tests were run, as requested.
+
 ## v0.5.0 — M5 · 2026-11-24
 
 Screen off. Still your music.

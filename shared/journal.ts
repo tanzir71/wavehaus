@@ -1,16 +1,18 @@
 import {UploadError} from './upload-input';
-export type JournalTable='tracks'|'albums'|'artists';
+export type JournalTable='tracks'|'albums'|'artists'|'playlists'|'playlist_items';
 export const reversibleOperation=(op:JournalOp)=>op.table!=='artists'||!op.before||Object.keys(op.after).some(key=>key!=='id'&&key!=='rev');
 export type JournalRow=Record<string,unknown>&{id:string;rev:number};
 export interface JournalOp {table:JournalTable;id:string;before:JournalRow|null;after:JournalRow}
 export interface JournalChange {id:string;created_at:number;undone_at:number|null;undoable?:number;ops:JournalOp[]}
 export interface RowGuard {table:JournalTable;id:string;rev:number}
-export interface CountGuard {table:'tracks'|'albums';column:'album_id'|'artist_id';id:string;count:number}
+export interface CountGuard {table:'tracks'|'albums'|'playlist_items';column:'album_id'|'artist_id'|'playlist_id';id:string;count:number}
 export interface JournalWrite {summary:string;ops:JournalOp[];guards?:RowGuard[];counts?:CountGuard[];appendTo?:string;undoIds?:string[];undoable?:boolean}
 export const journalColumns:Record<JournalTable,readonly string[]>={
  tracks:['owner_id','album_id','artist_id','title','artist_name','album_artist','album_title','track_no','disc_no','year','genre','bpm','duration_ms','codec','container','bitrate','sample_rate','bit_depth','channels','replaygain_track_db','replaygain_album_db','has_lyrics','lyrics','lyrics_synced','peaks','storage_key','size_bytes','sha256','quick_hash','original_name','original_path','mime','visibility','organise_source','added_at','deleted'],
  albums:['owner_id','title','artist_id','artist_name','year','art_source','art_key','tint','visibility','sync_visibility','folder_path','created_at','deleted','merge_key','identity_key'],
  artists:['name','sort_name','tint','deleted','name_key'],
+ playlists:['owner_id','name','description','kind','rules','cover_key','visibility','sync_visibility','created_at','updated_at','deleted'],
+ playlist_items:['owner_id','playlist_id','track_id','position','added_at','deleted'],
 };
 export const rowKey=(table:JournalTable,id:string)=>table+':'+id;
 export class JournalConflict extends UploadError {
@@ -57,6 +59,6 @@ export function undoPlan(changes:JournalChange[],current:Map<string,JournalRow>,
  }
  if(conflicts.size)throw new JournalConflict([...conflicts.values()]);
  const ops:JournalOp[]=[],guards:({table:JournalTable}&JournalRow)[]=[];
- for(const[key,record]of touched){const before=current.get(key)!,after=virtual.get(key)!;guards.push({table:record.table,...before});const op=journalOp(record.table,before,after);if(op)ops.push(op);}
+ for(const[key,record]of touched){const before=current.get(key)!,after=virtual.get(key)!;guards.push({table:record.table,...before});const op=journalOp(record.table,before,after);if(op)ops.push(op);else if(record.table==='playlists')ops.push({table:'playlists',id:before.id,before:{id:before.id,rev:before.rev},after:{id:before.id,rev:before.rev}});}
  return {ops,guards,changeIds:ordered.map(change=>change.id),virtual};
 }

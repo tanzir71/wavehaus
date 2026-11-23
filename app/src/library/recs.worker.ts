@@ -1,0 +1,3 @@
+import {RecommendationModel,type RecsData} from './recs-model';
+let model:RecommendationModel|null=null;
+self.onmessage=(event:MessageEvent<{id:number;type:string;data?:RecsData;seedId?:string;n?:number;excluded?:string[];lastArtists?:string[];nonce?:number}>)=>{const message=event.data;try{if(message.type==='update'){model=new RecommendationModel(message.data!);self.postMessage({id:message.id,mixes:model.mixes()});}else self.postMessage({id:message.id,ids:model?.radio(message.seedId!,message.n,message.excluded,message.lastArtists,message.nonce)||[]});}catch(error){self.postMessage({id:message.id,error:(error as Error).message,ids:[],mixes:[]});}};
