@@ -97,7 +97,9 @@ try:
         status, setup, cookie = call(base, '/api/setup', 'POST', {'username': 'release_tester', 'password': password, 'serverName': 'Before update', 'deviceLabel': 'Release fixture'})
         assert status == 201 and len(setup['recoveryCodes']) == 10
         assert call(base, '/api/admin/settings', 'PATCH', {'server_name': 'Preserved library', 'member_quota_bytes': 123456789}, cookie)[0] == 200
-        state = {'queue': [], 'index': 0, 'positionMs': 12345, 'autoplay': True}
+        state = {'queue': [], 'index': 0, 'positionMs': 12345, 'autoplay': True, 'shuffle': False, 'repeat': 'off', 'updatedAt': int(time.time()*1000),
+                 'sections': {'context': [], 'remaining': [], 'manual': [], 'automatic': [], 'history': [], 'current': None, 'currentSource': 'context',
+                              'contextLabel': 'Preserved queue', 'contextType': 'library', 'shuffle': False, 'repeat': 'off', 'autoplay': True}}
         assert call(base, '/api/player-state', 'PUT', state, cookie)[0] == 200
         (data / 'media').mkdir()
         fixture = data / 'media' / 'original.wav'

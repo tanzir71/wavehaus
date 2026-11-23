@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.0 — M3 · 2026-11-23
+
+Your music keeps moving.
+
+- One permanent audio element, synchronous track advance, Media Session controls/artwork, bounded network recovery and interruption handling.
+- Account-scoped local/cloud queue persistence, paused restoration and idempotent completed/skip listening history.
+- Separate manual, context and autoplay queues, accessible reordering/removal, deterministic artist-balanced shuffle, repeat and sleep timers.
+- Seven accessible canvas waveform variants, proportional album segments, saved moment markers and keyboard/drag seeking.
+- Updated Now Playing, Queue and the single-row desktop/mobile players; optional authenticated Apache/LiteSpeed media offloading.
+
+Twenty distinct generated tracks passed browser advance checks on Android emulation and desktop, with each measured transition below 300 ms. Physical screen-lock playback and a real LiteSpeed context remain unverified. Full radio ranking arrives in M6; moment and A–B editing arrive in M9.
+
 ## v0.2.1 — Landing fixes · 2026-11-23
 
 The approved mockups, with a footer that stays reachable.

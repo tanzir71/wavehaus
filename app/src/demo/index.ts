@@ -1,5 +1,6 @@
 import { demoUploads } from './uploads';
 import { demoArtwork } from './art';
+import { demoPlayback } from './playback';
 import { UploadError } from '../../../shared/upload-input';
 import { ApiError,emptyLibrary,type Api,type Album,type Library,type Track } from '../api/types';
 import { id,tint } from '../library/ids';
@@ -20,7 +21,7 @@ export async function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise
  if(path.startsWith('/demo-media/')||path.startsWith('/media/')){const state=(await readState())!;if(!demoSignedIn(state))fail('unauthenticated','Sign in to continue.',401);const track=state.tracks.find(t=>t.id===path.split('/')[2]&&!t.deleted),blob=track?await getBlob(`audio-${track.id}`):null;return blob&&track?rangeResponse(blob,request,track.mime,`"${track.sha256}"`):response({error:{code:'not_found',message:'Track not found'}},404);}
  if(!['GET','HEAD'].includes(method)&&request.headers.get('X-Wavehaus')!=='1')return response({error:{code:'csrf',message:'Missing X-Wavehaus header.'}},403);
  const body=()=>request.json();const s=(await readState())!;
- if(path==='/api/health')return response({ok:true,version:'0.2.1',schema:4,backend:'demo',needsSetup:false});
+ if(path==='/api/health')return response({ok:true,version:'0.3.0',schema:4,backend:'demo',needsSetup:false});
  if(path==='/api/config')return response({serverName:s.settings.server_name,registrationMode:s.settings.registration_mode,maxChunkBytes:8*1024*1024,maxFileBytes:2*1024**3,powDifficulty:18,features:{demo:true,uploads:true}});
  const authentication=await demoAuth(request,path);if(authentication)return authentication;
  if(!demoSignedIn(s))fail('unauthenticated','Sign in to continue.',401);
@@ -32,12 +33,11 @@ export async function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise
   for(const {key,row} of page)(items[key as keyof Library] as unknown[]).push(row);
   return response({rev:page.length&&page.length<rows.length?page.at(-1)!.row.rev:s.rev,items,hidden:{tracks:[],albums:[],playlists:[]},more:page.length<rows.length});
  }
- if(path==='/api/player-state')return method==='GET'?response(s.playerState):response(await mutate(async s=>{s.playerState=await body();return s.playerState;}));
+ const playback=await demoPlayback(request,path);if(playback)return playback;
  const uploadResponse=await demoUploads(request,path);if(uploadResponse)return uploadResponse;
  const artResponse=await demoArtwork(request,path);if(artResponse)return artResponse;
  if(path==='/api/tracks'&&['PATCH','DELETE'].includes(method))return response(await mutate(async s=>{const b=await body();const tracks=s.tracks.filter(t=>b.ids.includes(t.id)&&!t.deleted);const ops=[];for(const t of tracks){const before={...t};if(method==='DELETE')t.deleted=1;else{const values={...b.set,...b.perId?.[t.id]};for(const [key,value] of Object.entries(values))if(allowedMetadata.includes(key))(t as unknown as Record<string,unknown>)[columns[key]||key]=value;}t.rev=++s.rev;t.updated_at=Date.now();ops.push({table:'tracks',id:t.id,before,after:{...t}});}return {updated:tracks.length,changeId:log(s,`${method==='DELETE'?'Deleted':'Updated'} ${tracks.length} tracks`,ops)};}));
  const like=path.match(/^\/api\/likes\/([^/]+)$/);if(like&&['PUT','DELETE'].includes(method))return response(await mutate(s=>{if(!s.tracks.some(t=>t.id===like[1]&&!t.deleted))fail('not_found','Track not found.',404);let row=s.likes.find(l=>l.track_id===like[1]);if(!row){row={user_id:s.user.id,track_id:like[1],liked_at:Date.now(),rev:0,deleted:0};s.likes.push(row);}row.rev=++s.rev;row.deleted=method==='DELETE'?1:0;return {ok:true};}));
- if(path==='/api/plays'&&method==='POST'){await mutate(async s=>{s.plays.push(...(await body()).plays);});return response({ok:true});}
  if(path==='/api/changes')return response({items:s.changes.slice(0,Number(url.searchParams.get('limit')||50)),nextCursor:null});
  if(path==='/api/admin/settings')return method==='GET'?response(s.settings):response(await mutate(async s=>{Object.assign(s.settings,await body());return s.settings;}));
  if(path==='/api/sessions')return response({items:[{id:'demo',device_label:'This browser · demo',last_seen_at:Date.now(),current:true}],nextCursor:null});

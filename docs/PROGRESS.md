@@ -6,9 +6,10 @@ Source of truth: the unmodified files in `/handover`.
 
 - M0 — Shipped: PR #1 merged, tag/release `v0.0.0`, CI and Pages green. The live preview was checked for playback, installability and deep routing.
 - M1 — Shipped: PR #2 merged, tag/release `v0.1.0`, both server archives published and Pages green. Settings, Security and pairing were checked on the deployed preview.
-- M2 — Shipped: PR #3 merged, tag/release `v0.2.0`, both server archives and Pages verified. Resumable uploads, bounded-memory analysis, metadata/artwork and private library sync are implemented.
-- Landing correction — v0.2.1: approved product mockups, fullscreen wave coverage and reliable footer reachability. See `landing-fix-verification.md`.
-- M3–M10 — Pending, in the order defined in `/handover/TASKS.md`.
+- M2 — Shipped: PR #3 merged, tag/release `v0.2.0`, both archives published, CI and Pages green. A real file upload, private album and playback were checked on the deployed preview.
+- Landing correction — Shipped: PR #4, v0.2.1 and Pages verified at 412 and 1920 px. See `landing-fix-verification.md`.
+- M3 — In progress: playback engine, queue, persistence/plays, Media Session and core screens.
+- M4–M10 — Pending, in the order defined in `/handover/TASKS.md`.
 
 ## Verification boundaries
 

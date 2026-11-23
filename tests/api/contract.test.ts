@@ -2,6 +2,7 @@ import { beforeAll,afterAll,describe,it,expect } from 'vitest';
 import { startDemo,stopDemo,demoRequest,demoBinary,demoRaw,demoForm } from './demo-shim';
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
+import { id as eventId } from '../../app/src/library/ids';
 import { wav } from '../../scripts/make-chime.mjs';
 const base=/^https?:\/\//.test(process.env.API_BASE_URL||'')?process.env.API_BASE_URL!.replace(/\/$/,''):undefined;
 const demo=!base,username=demo?'demo':process.env.TEST_USERNAME||'contract_tester';
@@ -51,7 +52,7 @@ describe('shared API and auth contract',()=>{
   const library=await other.request('/api/library?since=0');expect(library.body.items.tracks.filter((t:any)=>t.id===done.body.track.id)).toHaveLength(1);expect(library.body.items.albums.some((a:any)=>a.id===done.body.album.id)).toBe(true);const duplicates=await other.request('/api/uploads/check','POST',{items:[{quickHash:quick,size:bytes.length}]});expect(duplicates.body.duplicates).toContain(quick);expect((await owner.request('/api/uploads','POST',input)).body.uploadId).toBe(id);
  },120000);
  it('streams authenticated media with exact byte ranges and HEAD headers',async()=>{
-  const path='/media/'+uploaded.track.id,size=uploaded.track.size_bytes,head=await owner.raw(path,'HEAD');expect(head.status).toBe(200);expect(head.length).toBe(0);expect(Number(head.headers['content-length'])).toBe(size);expect(head.headers['accept-ranges']).toBe('bytes');expect(head.headers['content-type']).toBe('audio/wav');expect(head.headers['cache-control']).toContain('private');
+  const path='/media/'+uploaded.track.id,size=uploaded.track.size_bytes,head=await owner.raw(path,'HEAD');expect(head.status).toBe(200);expect(head.length).toBe(0);expect(Number(head.headers['content-length'])).toBe(size);expect(head.headers['accept-ranges']).toBe('bytes');expect(head.headers['content-type']).toBe('audio/wav');expect(head.headers['cache-control']).toContain('private');expect(head.headers).not.toHaveProperty('x-sendfile');expect(head.headers).not.toHaveProperty('x-litespeed-location');
   const first=await owner.raw(path,'GET',{Range:'bytes=0-43'});expect(first.status).toBe(206);expect(first.length).toBe(44);expect(String.fromCharCode(...first.bytes.slice(0,4))).toBe('RIFF');expect(first.headers['content-range']).toBe(`bytes 0-43/${size}`);
   const tail=await owner.raw(path,'GET',{Range:'bytes=-16'});expect(tail.status).toBe(206);expect(tail.length).toBe(16);expect(tail.headers['content-range']).toBe(`bytes ${size-16}-${size-1}/${size}`);
   const invalid=await owner.raw(path,'GET',{Range:`bytes=${size}-`});expect(invalid.status).toBe(416);expect(invalid.headers['content-range']).toBe(`bytes */${size}`);
@@ -73,6 +74,16 @@ describe('shared API and auth contract',()=>{
    const completed=await owner.request(path+'/complete','POST',{metadata:{title:'Rejected',artist:'No added artist',durationMs:1000},album:{title:'No added album'}});expect(completed.status).toBe(mode==='hash'?409:415);expect(completed.body.error.code).toBe(mode==='hash'?'hash_mismatch':'unsupported');expect((await owner.request(path,'DELETE')).status).toBe(200);
   }
   const after=await owner.request('/api/library?since='+before);expect(Object.values(after.body.items).flat()).toHaveLength(0);expect((await owner.request('/api/auth/me')).body.user.used_bytes).toBe(used);
+ });
+ it('round-trips a sectioned queue and rejects invalid state without overwriting it',async()=>{
+  const id=uploaded.track.id,value={queue:[id,id],index:0,positionMs:12000,shuffle:false,repeat:'off',autoplay:true,updatedAt:Date.now(),sections:{context:[id],remaining:[],manual:[id],automatic:[],history:[],current:id,currentSource:'context',contextLabel:'Fixture album',contextType:'album:'+uploaded.album.id,shuffle:false,repeat:'off',autoplay:true}};
+  expect((await owner.request('/api/player-state','PUT',value)).body).toEqual(value);for(const invalid of [{...value,index:9},{...value,positionMs:-1},{...value,queue:['not-a-track']},{...value,sections:{...value.sections,current:undefined}}])expect((await owner.request('/api/player-state','PUT',invalid)).status).toBe(400);expect((await owner.request('/api/player-state')).body).toEqual(value);
+  const latest={...value,positionMs:14000,updatedAt:value.updatedAt+1};expect((await owner.request('/api/player-state','PUT',latest)).body).toEqual(latest);expect((await owner.request('/api/player-state','PUT',value)).body).toEqual(latest);expect((await owner.request('/api/player-state')).body).toEqual(latest);
+ });
+ it('records immutable play events once and paginates equal timestamps without losing a play',async()=>{
+  const at=Date.now(),trackId=uploaded.track.id,plays=[{id:eventId(),trackId,startedAt:at,msPlayed:uploaded.track.duration_ms,completed:true,skipped:false,context:'album:'+uploaded.album.id,deviceLabel:'Contract player'},{id:eventId(),trackId,startedAt:at,msPlayed:1000,completed:false,skipped:true,context:'search',deviceLabel:'Contract player'}];
+  expect((await owner.request('/api/plays','POST',{plays})).body.recorded).toBe(2);expect((await owner.request('/api/plays','POST',{plays})).body.recorded).toBe(0);expect((await owner.request('/api/plays','POST',{plays:[{...plays[0],id:eventId(),trackId:'00000000000000000000000000'}]})).body.recorded).toBe(0);
+  const first=await owner.request('/api/plays?limit=1');expect(first.body.items).toHaveLength(1);expect((await owner.request('/api/plays?limit=1&cursor=')).body).toEqual(first.body);expect(first.body.nextCursor).toBeTruthy();const second=await owner.request('/api/plays?limit=1&cursor='+first.body.nextCursor);expect(second.body.items).toHaveLength(1);expect(new Set([...first.body.items,...second.body.items].map(row=>row.id))).toEqual(new Set(plays.map(play=>play.id)));expect(second.body.nextCursor).toBeNull();expect((await owner.request('/api/plays','POST',{plays:[{...plays[0],msPlayed:-1}]})).status).toBe(400);expect((await owner.request('/api/plays','POST',{plays:[{...plays[0],id:null}]})).status).toBe(400);
  });
 
 });

@@ -10,15 +10,11 @@ function route_request(PDO $db,string $path,string $method): never {
     if($path==='/api/config'&&$method==='GET'){$cfg=settings($db);reply(['serverName'=>$cfg['server_name'],'registrationMode'=>$cfg['registration_mode'],'maxChunkBytes'=>max_chunk_bytes(),'maxFileBytes'=>$cfg['max_file_bytes'],'powDifficulty'=>$cfg['pow_difficulty'],'features'=>['demo'=>false,'uploads'=>true],'requirements'=>['php'=>PHP_VERSION,'pdoSqlite'=>extension_loaded('pdo_sqlite'),'fileinfo'=>extension_loaded('fileinfo'),'mbstring'=>extension_loaded('mbstring'),'openssl'=>extension_loaded('openssl')]]);}
     if(auth_routes($db,$path,$method))exit;
     $auth=current_auth($db);
-    if(uploads_routes($db,$auth,$path,$method)||artwork_routes($db,$auth,$path,$method)||library_routes($db,$auth,$path,$method))exit;
+    if(uploads_routes($db,$auth,$path,$method)||artwork_routes($db,$auth,$path,$method)||library_routes($db,$auth,$path,$method)||playback_routes($db,$auth,$path,$method))exit;
     if($path==='/api/admin/settings'){
         require_admin($auth);
         if($method==='GET')reply(settings($db));
         if($method==='PATCH'){$input=body();if(isset($input['server_name'])&&(!is_string($input['server_name'])||mb_strlen($input['server_name'])>100||trim($input['server_name'])===''))fail('validation','Use a server name of 1–100 characters.');transaction($db,fn()=>save_settings($db,$input));reply(settings($db));}
-    }
-    if($path==='/api/player-state'){
-        if($method==='GET'){$row=query_one($db,'SELECT state FROM player_state WHERE user_id=?',[$auth['user']['id']]);reply($row?json_decode($row['state'],true):null);}
-        if($method==='PUT'){$input=body();execute($db,'INSERT INTO player_state(user_id,state,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state,updated_at=excluded.updated_at',[$auth['user']['id'],json_encode($input,JSON_THROW_ON_ERROR),now_ms()]);reply($input);}
     }
     fail('not_found','This endpoint is not available in this release.',404);
 }
