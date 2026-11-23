@@ -22,7 +22,6 @@ The design is final in Figma, and this folder is the complete spec.
   - `https://tanzir71.github.io/wavehaus/` is the landing page and its subpages (static).
   - `https://tanzir71.github.io/wavehaus/app/` is the real PWA running in **demo mode**: an in-browser backend with generated sample music (`ARCHITECTURE.md` § Demo backend). The owner installs it from Brave on Android and runs the background-play test against the preview.
 - **M0 already ships** the landing page with its subpages, the installable PWA shell and demo mode, so there's something real to look at on day one.
-- **The owner's own deployment is the primary product.** `music.tanziro.com/` is the **instance homepage** (`HOMEPAGE.md`, Figma L6): the owner's music, playable without an account, with "Open the app" (`/app/`) as the primary action, invite-only sign-ups when enabled, and a quiet link to this repo. It ships in M3 together with the first production deploy.
 - Workflow: `.github/workflows/pages.yml` (details in `DEPLOY.md` § A).
 
 ## Read in this order
@@ -35,9 +34,8 @@ The design is final in Figma, and this folder is the complete spec.
 6. `VISIBILITY.md`: private/public for tracks, albums, folders and playlists
 7. `AUTH.md` + `REFERENCES.md`: accounts, invites/referrals, spam hardening, recovery codes. **Port the owner's Tack login/register code** instead of writing it from scratch.
 8. `API.md` + `schema.sql`: the contract every backend must satisfy
-9. `HOMEPAGE.md`: the instance homepage at `/` and the Showcase. This is the owner's primary page.
-10. `RECOMMENDATIONS.md`, `ASSISTANTS.md`, `LANDING.md` (the project site), `DEPLOY.md`
-11. `TASKS.md`: milestones with acceptance criteria. Work milestone by milestone.
+9. `RECOMMENDATIONS.md`, `ASSISTANTS.md`, `LANDING.md`, `DEPLOY.md`
+10. `TASKS.md`: milestones with acceptance criteria. Work milestone by milestone.
 
 `RESEARCH.md` explains the reasoning (competitors, platform constraints, sources). `ASSETS.md` lists the photo, font, icon and brand files.
 
@@ -89,8 +87,7 @@ If you have Figma MCP access, use the node IDs in `DESIGN.md`. Otherwise use the
 /server-php          # shared-hosting backend: public/index.php front controller + lib/*.php (no Composer)
 /server-worker       # Cloudflare Worker (TypeScript, no framework) + wrangler.toml
 /migrations          # 0001_init.sql … shared by both backends (SQLite dialect, D1-compatible)
-/landing             # project marketing site + subpages (HTML + CSS, no JS required) → /landing/dist (GitHub Pages)
-/home                # instance homepage: home.js (≤ 25 KB, reuses app/src/engine) + templates used by both servers
+/landing             # static marketing site + subpages (HTML + CSS, no JS required) → /landing/dist
 /tools/mcp.mjs       # zero-dependency MCP stdio server wrapping the API (for CLI agents)
 /tests/api           # contract tests (Vitest) against BASE_URL, or the demo adapter via a fetch shim
 /tests/e2e           # Playwright (Android emulation 412×915 + desktop 1440×900)

@@ -6,6 +6,7 @@ import { phpCommand } from './php.mjs';
 const worker=process.argv[2]==='worker',children=[];
 function run(binary,args,env={}){const child=spawn(binary,args,{stdio:'inherit',windowsHide:true,env:{...process.env,...env}});children.push(child);child.on('error',error=>{console.error(error.message);process.exitCode=1;});return child;}
 const done=child=>new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>code===0?resolve():reject(new Error(`Process exited ${code}`)));});
+await done(run(process.execPath,['scripts/build.mjs'],{APP_BASE:'/'}));
 if(worker){
  try{await access('server-worker/node_modules/wrangler/bin/wrangler.js');}catch{throw new Error('Run npm ci --prefix server-worker before npm run dev:worker.');}
  try{await access('server-worker/.dev.vars');}catch{await writeFile('server-worker/.dev.vars',`APP_SECRET=${randomBytes(32).toString('hex')}\n`,{flag:'wx'});}

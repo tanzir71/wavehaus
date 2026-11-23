@@ -137,8 +137,6 @@ Foundations sections: Cover `6:2`, Colour `6:6`, Type `6:75`, Icons `6:122`, Cor
 | L3 Background play | 57:817 | L3-background-play.png |
 | L4 Self-hosted Spotify alternative | 57:1012 | L4-self-hosted-spotify-alternative.png |
 | L5 Changelog | 57:1187 | L5-changelog.png |
-| **L6 Instance homepage, desktop** (owner's site at `/`) | 59:701 | L6-instance-homepage-desktop.png |
-| **L6m Instance homepage, mobile** (412) | 60:767 | L6m-instance-homepage-mobile.png |
 | Logo options (B chosen) | 50:686 | design/foundations/logo-options.png |
 
 **Visibility UI** (no separate frame; composed from Chip, Button and option rows): the visibility chip on album and playlist headers, the bottom sheet on mobile and a 360 px popover on desktop. The full spec is in `VISIBILITY.md`; the landing "Beyond playback" section (`47:676`) shows the sheet as the visual reference.

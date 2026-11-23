@@ -90,15 +90,6 @@ This file is the single source of truth for privacy. `ORGANISE.md`, `AUTH.md`, `
 - One `changes` row per operation, e.g. "Made album Glass Rooms public (11 tracks)" or "Made 3 albums and 2 playlists private (52 tracks)".
 - `ops` stores each track's **previous** visibility, so undo restores Mixed states exactly, plus the album and playlist `visibility`/`sync_visibility` values.
 
-## Showcase (homepage, anonymous listening)
-
-The instance homepage lets **signed-out visitors** play items the owner has curated. This is a separate, owner/admin-only **showcase** flag layered on top of the two visibility levels:
-- Only **public** items can be showcased.
-- Members' albums need their "Allow on homepage" opt-in first.
-- Removing an item from the showcase, or making it private, ends anonymous access on the next request.
-
-The full rules are in `HOMEPAGE.md`. In the visibility sheet, the owner sees one extra row for public items: "Show on homepage" (toggle), with the note "Anyone can play it, no account needed."
-
 ## Acceptance tests
 
 1. Making an album with 9 private and 2 public tracks **public** is one request and one change entry; all 11 become public. Undo restores 9/2 exactly.

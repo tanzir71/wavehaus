@@ -63,7 +63,8 @@ def start(storage):
         env['HOME'] = str(blocked_home)
     log = open(temporary / f'php-{port}.log', 'wb')
     process = subprocess.Popen([php, *arguments, '-S', f'127.0.0.1:{port}', '-t', str(stage), str(stage / 'router.php')], env=env, stdout=log, stderr=log)
-    base = f'http://127.0.0.1:{port}'
+    app_base = json.loads((stage / 'app/deployment.json').read_text())['base'].rstrip('/')
+    base = f'http://127.0.0.1:{port}' + app_base
     for _ in range(100):
         try:
             if urllib.request.urlopen(base + '/api/health').status == 200:
@@ -105,7 +106,7 @@ try:
         with closing(sqlite3.connect(data / 'wavehaus.sqlite', isolation_level=None)) as db:
             owner = db.execute('SELECT id,password_hash FROM users').fetchone()
             assert owner[1] != password
-            assert db.execute('SELECT COUNT(*) FROM schema_migrations').fetchone()[0] == 2
+            assert db.execute('SELECT COUNT(*) FROM schema_migrations').fetchone()[0] == 4
         # Force an outdated bcrypt cost, then prove successful login rehashes it.
         weak = subprocess.run([php, *arguments, '-r', "echo password_hash('A preserved release test passphrase!', PASSWORD_BCRYPT, ['cost'=>4]);"], check=True, capture_output=True, text=True).stdout
         with closing(sqlite3.connect(data / 'wavehaus.sqlite', isolation_level=None)) as db:

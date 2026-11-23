@@ -36,8 +36,7 @@ This folder is the **design handover**. Codex: start with [`AGENTS.md`](AGENTS.m
 - `RECOMMENDATIONS.md`: on-device mixes, autoplay, radio, search
 - `ASSISTANTS.md`: Claude/Codex operating the app (signed-in browser or API/MCP), audit and undo
 - `DESIGN.md`: visual rules, tokens, logo, components and screens with Figma node IDs, waveform spec
-- `HOMEPAGE.md`: **the instance homepage at `/`**: your music playable without an account, Open the app, invites, GitHub link, Showcase
-- `LANDING.md`: the project site on GitHub Pages: landing and subpages (docs, background play, compare, changelog), copy, SEO
+- `LANDING.md`: landing and subpages (docs, background play, compare, changelog), copy, SEO
 - `DEPLOY.md`: GitHub Pages preview, Namecheap/cPanel, Cloudflare, updates
 - `TASKS.md`: milestones with acceptance criteria. Each one ships a preview
 - `RESEARCH.md`: existing solutions and platform constraints, with sources

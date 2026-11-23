@@ -32,8 +32,8 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 ## Remaining acceptance
 
 - Physical Brave/Chrome/iPhone screen-lock and OS share-target checks remain unverified; viewport emulation does not establish those results.
-- M2–M10 remain pending. M1 production music endpoints intentionally remain unavailable until M2/M3.
-- Owner-supplied homepage/Showcase additions were incorporated into the handover snapshot. They ship in M3, with the app at `/app/` and the separate project site on Pages.
+- M2 is being verified; M3–M10 remain pending. Production upload and authenticated media endpoints are now implemented.
+- The 23 November scope correction removes the visitor website and anonymous media access. Production builds default to `/` and support `APP_BASE`; Pages retains `/wavehaus/app/`.
 
 ## M1 verification
 
@@ -47,3 +47,12 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 - Initial entry JavaScript: 48.8 KB gzip in demo; about 41.5 KB in production. Upload/music-metadata and auth screens load as separate chunks.
 - Tack port mapping and explicit M7 registration/spam-hardening deferrals are recorded in `REFERENCES.md`.
 - Linux CI passed the full suite, including the independent package/redeploy test. The PHP reset config also passed with OPcache timestamp validation disabled. The updated changelog measured 100/100/100/100.
+
+## M2 verification
+
+- 23 unit checks and 22 shared API/auth checks per adapter passed. The one skipped API check per target is explicitly backend-specific.
+- Both HTTP backends passed browser tag/artwork/lyrics and second-session sync checks, plus a 300 MiB throttled reload/resume test with exact SHA and no confirmed-chunk retransmission.
+- Six-format folder import and duplicate override passed on Android and desktop Pages emulation. The share-target handler passed simulated POST intake; physical OS sharing is unverified.
+- Fresh/upgraded/legacy SQLite and D1 schemas match, with preserved data and foreign keys. Both release archives passed safe overwrite checks.
+- Home, Now Playing, Upload, sign-in and Settings accessibility measured 100. Initial JS including static imports is 54.3 KiB gzip in demo and 43.0 KiB in production.
+- Details and boundaries: [M2 verification](m2-verification.md).

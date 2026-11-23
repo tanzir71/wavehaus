@@ -1,6 +1,6 @@
 {
   "name": "wavehaus",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -18,6 +18,8 @@
     "test:api": "node scripts/test-api.mjs",
     "test:php": "node scripts/test-backend.mjs php",
     "test:worker": "node scripts/test-backend.mjs worker",
+    "test:migrations": "node scripts/test-migrations.mjs",
+    "test:migrations:worker": "node scripts/test-migrations-worker.mjs",
     "e2e": "playwright test",
     "package": "node scripts/package.mjs",
     "preview": "node scripts/serve.mjs"

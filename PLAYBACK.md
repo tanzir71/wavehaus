@@ -124,7 +124,7 @@ Other strings:
 
 ### Manifest & install
 
-- `manifest.webmanifest`: `name: "Wavehaus"`, `short_name: "Wavehaus"`, `display: "standalone"`, `start_url: "/app/?source=homescreen"`, `scope: "/app/"`, `background_color: "#0A0A0B"`, `theme_color: "#0A0A0B"`, icons from `assets/brand/` (`icon-192.png`, `icon-512.png` `purpose:any`, `icon-maskable-512.png` `purpose:maskable`), `apple-touch-icon-180.png` and `favicon-32.png`/`favicon.svg` in `<head>`. On GitHub Pages, use `start_url: "./?source=homescreen"` and `scope: "./"` (relative to `/wavehaus/app/`).
+- `manifest.webmanifest`: `name: "Wavehaus"`, `short_name: "Wavehaus"`, `display: "standalone"`, `start_url: "/?source=homescreen"`, `background_color: "#0A0A0B"`, `theme_color: "#0A0A0B"`, icons from `assets/brand/` (`icon-192.png`, `icon-512.png` `purpose:any`, `icon-maskable-512.png` `purpose:maskable`), `apple-touch-icon-180.png` and `favicon-32.png`/`favicon.svg` in `<head>`. On GitHub Pages, use `start_url: "./?source=homescreen"` and `scope: "./"` (relative to `/wavehaus/app/`).
 - `share_target`: see `ORGANISE.md`.
 - With `?source=homescreen` and not standalone, the app can tell it was opened from a shortcut in a tab, which is the desired iOS route. Show nothing extra.
 - If `display-mode: standalone` on iOS and the background test failed, show the hint: "Home-screen web apps on iPhone may pause in the background. Use method A or B."

@@ -13,6 +13,16 @@ Acceptance criteria also include:
 - E2E green at 412×915 (Android emulation) and 1440×900.
 - Screens match the listed Figma frames.
 
+## Scope change, 23 Nov 2026: do this before continuing M2
+
+The page the owner's own server shows to visitors is **out of Wavehaus scope**. The owner designs and builds it as part of their own website, not this repo. Undo the pieces that M0–M2 already added:
+1. Remove the `/` visitor-page route and every `/api/public/*` endpoint from `server-php/lib/router.php` and `server-worker/src/router.ts`. Signed-out requests to `/media` and `/art` must return 401 again (`AUTH.md`: no anonymous access in P0).
+2. Add `migrations/0002_drop_showcase.sql`. It drops the `showcase` and `showcase_stats` tables and the `albums.allow_homepage` column (rebuild the table if the SQLite/D1 version needs it). **Never edit `0001_init.sql`**, because it has already shipped in the M1 release zips.
+3. Make the production base path a build setting (`APP_BASE`, default `/`), not hard-coded `/app/` (`ARCHITECTURE.md`). The GitHub Pages preview keeps `/wavehaus/app/`.
+4. Remove the related mentions from the repo `README.md`, `docs/PROGRESS.md` and the demo backend. Record the change in `CHANGELOG.md`.
+
+**Accept:** `tests/api` is green on both backends; no route answers without a session except `/api/health`, `/api/config`, the auth endpoints and `/setup`; and a fresh install and an M1 → M2 upgrade both end with the same schema.
+
 ## M0 — Repo, landing, PWA shell, demo mode (preview on day one)
 
 **Repo and CI**
@@ -84,15 +94,7 @@ Acceptance criteria also include:
 - Share-to-Wavehaus works on an Android device.
 - A new track appears on a second device within 60 s.
 
-## M3 — Playback engine, core screens and the instance homepage (M1 `9:168`, M4 `10:599`, M5 `17:806`, M6 `11:557`, D1 `22:171`, D2 `22:453`, L6 `59:701`, L6m `60:767`)
-
-- **Instance homepage** (`HOMEPAGE.md`):
-  - `/` rendered on the server, with `home.js` reusing the engine
-  - the app moved under `/app/`
-  - Showcase (anonymous play of curated public items) and Settings → Homepage
-  - the registration-mode CTA table (the invite form posts in M7; until then it shows "Invites open soon")
-- **First production deploy** to `music.tanziro.com` (shared hosting), with Dual Frequency featured.
-
+## M3 — Playback engine & core screens (M1 `9:168`, M4 `10:599`, M5 `17:806`, M6 `11:557`, D1 `22:171`, D2 `22:453`)
 
 **Engine** per `PLAYBACK.md`:
 - Single audio element and synchronous track advance.
@@ -114,7 +116,6 @@ Acceptance criteria also include:
 - LiteSpeed / X-Sendfile in PHP.
 
 **Accept**
-- `HOMEPAGE.md` acceptance tests 1–6 pass.
 - Track advance under 300 ms across 20 tracks with the screen locked on Android Brave (Background play on).
 - Lock-screen controls and artwork show.
 - The waveform slider is accessible.
@@ -154,9 +155,7 @@ Acceptance criteria also include:
 - Mixes are deterministic per day.
 - Autoplay avoids tracks played in the last 2 h.
 
-## M7 — Visibility, members, access & spam hardening (D5 `27:1046`, `VISIBILITY.md`, homepage invite section)
-
-- Wire the homepage request form and the invite-code field to `request-access` and `/join`. The CTAs follow the registration mode.
+## M7 — Visibility, members, access & spam hardening (D5 `27:1046`, `VISIBILITY.md`)
 
 - Visibility chip, sheet and popover for track, album, folder, playlist and multi-selection.
 - `POST /api/visibility` with `dryRun`. `hidden` sync. Purge of offline copies. Admin takedown.

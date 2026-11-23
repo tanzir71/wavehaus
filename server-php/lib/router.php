@@ -7,23 +7,18 @@ function ini_bytes(string $value): int {
 function max_chunk_bytes(): int { return max(65536,min(8*1024**2,ini_bytes(ini_get('upload_max_filesize')),ini_bytes(ini_get('post_max_size'))-512*1024)); }
 function route_request(PDO $db,string $path,string $method): never {
     if($path==='/api/health'&&$method==='GET')reply(['ok'=>true,'version'=>WH_VERSION,'schema'=>WH_SCHEMA,'backend'=>'php','needsSetup'=>!query_one($db,'SELECT id FROM users LIMIT 1')]);
-    if($path==='/api/config'&&$method==='GET'){$cfg=settings($db);reply(['serverName'=>$cfg['server_name'],'registrationMode'=>$cfg['registration_mode'],'maxChunkBytes'=>max_chunk_bytes(),'maxFileBytes'=>$cfg['max_file_bytes'],'powDifficulty'=>$cfg['pow_difficulty'],'features'=>['demo'=>false,'uploads'=>false,'homepage'=>false],'requirements'=>['php'=>PHP_VERSION,'pdoSqlite'=>extension_loaded('pdo_sqlite'),'fileinfo'=>extension_loaded('fileinfo'),'mbstring'=>extension_loaded('mbstring'),'openssl'=>extension_loaded('openssl')]]);}
+    if($path==='/api/config'&&$method==='GET'){$cfg=settings($db);reply(['serverName'=>$cfg['server_name'],'registrationMode'=>$cfg['registration_mode'],'maxChunkBytes'=>max_chunk_bytes(),'maxFileBytes'=>$cfg['max_file_bytes'],'powDifficulty'=>$cfg['pow_difficulty'],'features'=>['demo'=>false,'uploads'=>true],'requirements'=>['php'=>PHP_VERSION,'pdoSqlite'=>extension_loaded('pdo_sqlite'),'fileinfo'=>extension_loaded('fileinfo'),'mbstring'=>extension_loaded('mbstring'),'openssl'=>extension_loaded('openssl')]]);}
     if(auth_routes($db,$path,$method))exit;
     $auth=current_auth($db);
+    if(uploads_routes($db,$auth,$path,$method)||artwork_routes($db,$auth,$path,$method)||library_routes($db,$auth,$path,$method))exit;
     if($path==='/api/admin/settings'){
         require_admin($auth);
         if($method==='GET')reply(settings($db));
         if($method==='PATCH'){$input=body();if(isset($input['server_name'])&&(!is_string($input['server_name'])||mb_strlen($input['server_name'])>100||trim($input['server_name'])===''))fail('validation','Use a server name of 1–100 characters.');transaction($db,fn()=>save_settings($db,$input));reply(settings($db));}
     }
-    if($path==='/api/library'&&$method==='GET'){
-        $since=filter_var($_GET['since']??'0',FILTER_VALIDATE_INT,['options'=>['min_range'=>0]]);if($since===false)fail('invalid_cursor','Invalid library cursor.');
-        // M1 has account setup and an empty production library. M2 adds uploads/sync.
-        reply(['rev'=>(int)$db->query('SELECT n FROM revs WHERE id=1')->fetchColumn(),'items'=>['tracks'=>[],'albums'=>[],'artists'=>[],'playlists'=>[],'playlistItems'=>[],'likes'=>[],'moments'=>[]],'hidden'=>['tracks'=>[],'albums'=>[],'playlists'=>[]],'more'=>false]);
-    }
     if($path==='/api/player-state'){
         if($method==='GET'){$row=query_one($db,'SELECT state FROM player_state WHERE user_id=?',[$auth['user']['id']]);reply($row?json_decode($row['state'],true):null);}
         if($method==='PUT'){$input=body();execute($db,'INSERT INTO player_state(user_id,state,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state,updated_at=excluded.updated_at',[$auth['user']['id'],json_encode($input,JSON_THROW_ON_ERROR),now_ms()]);reply($input);}
     }
-    if($path==='/api/changes'&&$method==='GET')reply(['items'=>[],'nextCursor'=>null]);
     fail('not_found','This endpoint is not available in this release.',404);
 }

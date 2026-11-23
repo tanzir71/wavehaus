@@ -4,11 +4,11 @@ Your music, at home. A self-hosted music streaming PWA that installs from the br
 
 [Project site](https://tanzir71.github.io/wavehaus/) · [Try the app](https://tanzir71.github.io/wavehaus/app/) · [Changelog](https://tanzir71.github.io/wavehaus/changelog/)
 
-## M1 preview
+## M2 preview
 
 The browser demo generates twelve original tracks across three albums. You can play, scrub, browse, like, queue and upload music. Demo uploads and listening data stay in that browser. Clearing site data removes them.
 
-The preview also has sign-in, recovery codes, device pairing and settings. The demo starts as `demo` with initial password `wavehaus-demo`; its accounts and pairing are simulated in that browser. PHP and Worker releases use real secure HTTP-only cookies and support owner setup, recovery and device sessions. Production uploads and streaming arrive in M2/M3. See [implementation progress](docs/PROGRESS.md) for remaining milestones and verification boundaries.
+The preview also has sign-in, recovery codes, device pairing and settings. The demo starts as `demo` with initial password `wavehaus-demo`; its accounts and pairing are simulated in that browser. PHP and Worker releases use real secure HTTP-only cookies and support owner setup, recovery and device sessions. Both servers now support resumable uploads, artwork, private library sync and authenticated streaming. Playback hardening continues in M3. See [implementation progress](docs/PROGRESS.md) for remaining milestones and verification boundaries.
 
 ## Run locally
 
@@ -32,7 +32,7 @@ npm run build:pages
 npm run e2e
 ```
 
-`npm run build` produces `app/dist` (production base `/app/`) and `landing/dist`. `npm run build:pages` assembles `site/` under the `/wavehaus/` base. `npm run preview` serves it locally. The Upload route and tag parser load separately from the initial app.
+`npm run build` produces `app/dist` (production base `/`) and `landing/dist`. Set `APP_BASE` to a path such as `/music/` before building to serve the app under that path. `npm run build:pages` keeps the demo at `/wavehaus/app/` and assembles the project site under `/wavehaus/`. `npm run preview` serves it locally. The Upload route and tag parser load separately from the initial app.
 
 `npm run package` builds both server zips in `dist/`. Install/update instructions are included in each archive. `python tests/package/redeploy.py` independently validates the zips and verifies two application overwrites against a disposable PHP store; it needs only Python's standard library. `BASE_URL=… npm run test:api` targets an HTTP backend (use a disposable database and TEST_USERNAME/TEST_PASSWORD for an existing fixture account).
 
@@ -42,7 +42,7 @@ Open the app in Brave on Android, enable **Settings → Media → Background pla
 
 ## Implementation source
 
-[AGENTS.md](AGENTS.md) defines the build rules. The supplied handover, including design exports, brand assets, tokens and API/schema specifications, is preserved in [handover](handover/). The instance homepage and anonymous Showcase are scheduled for M3; they are distinct from the project marketing site.
+[AGENTS.md](AGENTS.md) defines the build rules. The supplied handover, including design exports, brand assets, tokens and API/schema specifications, is preserved in [handover](handover/). A visitor website is outside this project's scope. Music and artwork require a signed-in session in P0.
 
 Runtime dependencies: Preact, Signals, idb-keyval, MiniSearch and lazy-loaded music-metadata. Plain CSS, a hand-written service worker and original generated audio. [Dependency decisions](docs/DEPENDENCIES.md).
 

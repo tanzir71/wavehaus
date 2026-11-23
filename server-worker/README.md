@@ -1,8 +1,12 @@
-# Wavehaus Worker — M1
+# Wavehaus Worker — M2
 
-Owner setup, sign-in, recovery, devices and settings are implemented. Production music uploads/streaming arrive in M2/M3. The Pages demo already has generated music.
+Owner setup, sign-in, recovery, devices, settings, resumable uploads, artwork, library sync and authenticated streaming are implemented. Playback hardening continues in M3. The Pages demo has its own browser-local backend.
 
 Use Node 24+ locally; there is no Node server to manage.
+
+Production assets default to `/`. In the source repository, set `APP_BASE=/music/` before `npm run package` for a subpath; keep the same base on later releases and open `/music/setup`. Visitor websites are outside Wavehaus.
+
+Upload parts are staged as immutable R2 objects keyed by their hash, then streamed through R2 multipart completion. This prevents competing retries from replacing an accepted chunk. Staging temporarily uses extra R2 storage and operations; successful completion/abort removes the parts. Native streaming WebCrypto verifies the full object without a whole-file allocation. D1 completion leases renew at most every 30 seconds, keeping large-file assembly within the Free plan's per-invocation query budget.
 
 1. Run `npm ci --prefix server-worker`, then `cd server-worker`.
 2. Run `npx wrangler login` and `npx wrangler d1 create wavehaus`. Put the returned database ID in `wrangler.toml`.

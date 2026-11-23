@@ -1,8 +1,4 @@
-# Project site: landing page + subpages (`/landing`)
-
-> There are **two** landing experiences:
-> - **This file** covers the **project site** (L1–L5). It markets Wavehaus to self-hosters and lives on GitHub Pages and in the repo.
-> - **`HOMEPAGE.md`** covers **L6**, the **instance homepage** every deployed server shows at `/`. On `music.tanziro.com` that is the owner's music plus the app, with invite-only sign-ups and a link to the repo. **L6 is the primary page for the owner's own deployment.**
+# Landing page + subpages (`/landing`)
 
 Static HTML + CSS, with no JS required. One optional script is allowed: under 3 KB, deferred, for the platform switch on the Background play page. Every page scores Lighthouse 100/100/100/100.
 

@@ -26,8 +26,14 @@ jobs:
           extensions: pdo_sqlite, mbstring, openssl, fileinfo
           coverage: none
       - run: npm run build
+      - run: npm run test:migrations
+      - run: npm run test:migrations:worker
       - run: npm run test:php
+        env:
+          RUN_LARGE_UPLOAD: '1'
       - run: npm run test:worker
+        env:
+          RUN_LARGE_UPLOAD: '1'
       - run: npm run package
       - run: python tests/package/redeploy.py
       - run: npm run build:pages

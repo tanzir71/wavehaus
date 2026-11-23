@@ -44,7 +44,6 @@ jobs:
 
 **Preview URLs:**
 - Landing and subpages: `https://tanzir71.github.io/wavehaus/` (`/docs/…`, `/background-play`, `/self-hosted-spotify-alternative`, `/changelog`).
-- Instance homepage (L6) in demo mode: `https://tanzir71.github.io/wavehaus/home/`, showing seeded showcase albums playable from the page.
 - App, demo mode: `https://tanzir71.github.io/wavehaus/app/`. Install it from Brave on Android to test background play on the preview.
 
 **App SPA fallback on Pages:** `site/app/404.html` is a copy of the app's `index.html`. The router reads `location.pathname` relative to the base.
@@ -56,11 +55,6 @@ jobs:
 4. Post the preview URLs and "what to try" in the PR.
 
 **Custom domain (optional, later):** add `CNAME` with e.g. `wavehaus.tanziro.com`, then set the landing base to `/` and the app base to `/app/`.
-
-**The owner's own server (`music.tanziro.com`)**:
-- From M3 on, deploy each release there with § B. Shared hosting is the owner's standard.
-- `/` is the instance homepage (`HOMEPAGE.md`); `/app/` is the app.
-- After setup, open Settings → Homepage, feature Dual Frequency, set the registration mode (closed by default; invite or request when the owner chooses) and check the GitHub link.
 
 ## B. Shared hosting (Namecheap Stellar/cPanel, any PHP 8.1+ host)
 
