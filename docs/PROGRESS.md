@@ -5,8 +5,9 @@ Source of truth: the unmodified files in `/handover`.
 ## Milestones
 
 - M0 — Shipped: PR #1 merged, tag/release `v0.0.0`, CI and Pages green. The live preview was checked for playback, installability and deep routing.
-- M1 — Implemented and locally verified; milestone PR/release and Pages deployment pending.
-- M2–M10 — Pending, in the order defined in `/handover/TASKS.md`.
+- M1 — Shipped: PR #2 merged, tag/release `v0.1.0`, both server archives published and Pages green. Settings, Security and pairing were checked on the deployed preview.
+- M2 — In progress: resumable uploads, bounded-memory analysis, metadata/artwork and real server library sync.
+- M3–M10 — Pending, in the order defined in `/handover/TASKS.md`.
 
 ## Verification boundaries
 
@@ -45,3 +46,4 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 - Lighthouse 13.6.0: Home, Now Playing, sign-in and Settings accessibility 100; no zero-score audits. Chromium reported no PWA installability errors. Results: `m1-lighthouse.json`.
 - Initial entry JavaScript: 48.8 KB gzip in demo; about 41.5 KB in production. Upload/music-metadata and auth screens load as separate chunks.
 - Tack port mapping and explicit M7 registration/spam-hardening deferrals are recorded in `REFERENCES.md`.
+- Linux CI passed the full suite, including the independent package/redeploy test. The PHP reset config also passed with OPcache timestamp validation disabled. The updated changelog measured 100/100/100/100.

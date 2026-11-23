@@ -1,0 +1,8 @@
+import { it,expect } from 'vitest';
+import { createHash } from 'node:crypto';
+import { Sha256,hashBlob,hashStream } from '../../shared/sha256';
+const nodeHash=(bytes:Uint8Array)=>createHash('sha256').update(bytes).digest('hex');
+it('matches independent SHA-256 vectors across padding and block boundaries',()=>{for(const length of [0,1,3,55,56,63,64,65,127,128,129,1000,65537]){const bytes=Uint8Array.from({length},(_,i)=>(i*37+11)&255);for(const chunk of [1,7,63,64,65,1024]){const hash=new Sha256();for(let offset=0;offset<length;offset+=chunk)hash.update(bytes.subarray(offset,offset+chunk));expect(hash.digest()).toBe(nodeHash(bytes));expect(hash.digest()).toBe(nodeHash(bytes));expect(()=>hash.update(new Uint8Array([1]))).toThrow('finalized');}}});
+it('hashes blobs in bounded slices and readable streams to the same file digest',async()=>{const bytes=Uint8Array.from({length:8*1024**2+333},(_,i)=>i&255),blob=new Blob([bytes]),progress:number[]=[];expect(await hashBlob(blob,n=>progress.push(n))).toBe(nodeHash(bytes));expect(progress).toEqual([8*1024**2,bytes.length]);expect(await hashStream(blob.stream())).toEqual({sha256:nodeHash(bytes),size:bytes.length});});
+it('cancels before reading an aborted upload',async()=>{const controller=new AbortController();controller.abort();await expect(hashBlob(new Blob(['test']),undefined,controller.signal)).rejects.toMatchObject({name:'AbortError'});});
+it('hashes a 300 MB stream without allocating the entire file',()=>{const chunk=new Uint8Array(1024**2).fill(71),reference=createHash('sha256'),hash=new Sha256();for(let i=0;i<300;i++){reference.update(chunk);hash.update(chunk);}expect(hash.digest()).toBe(reference.digest('hex'));},30000);
