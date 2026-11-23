@@ -7,6 +7,7 @@ import { libraryRoutes } from './library';
 import { uploadsRoutes } from './uploads';
 import { artworkRoutes } from './art';
 import { playbackRoutes } from './playback';
+import { journalRoutes } from './journal-routes';
 export const VERSION='0.4.0',SCHEMA=5;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
@@ -14,6 +15,7 @@ export async function apiRoute(request:Request,env:Env,path=new URL(request.url)
  if(path==='/api/config'&&method==='GET'){const cfg=await settings(env.DB),hashIterations=iterations(env);return json({serverName:cfg.server_name,registrationMode:cfg.registration_mode,maxChunkBytes:8*1024**2,maxFileBytes:cfg.max_file_bytes,powDifficulty:cfg.pow_difficulty,hashIterations,securityWarning:hashIterations<100000?'Password hashing is below the recommended 100,000 iterations.':null,features:{demo:false,uploads:true}});}
  const result=await authRoutes(request,env,path);if(result)return result;
  const auth=(await currentAuth(request,env))!;
+ const journal=await journalRoutes(request,env,auth,path);if(journal)return journal;
  const uploaded=await uploadsRoutes(request,env,auth,path);if(uploaded)return uploaded;
  const artwork=await artworkRoutes(request,env,auth,path);if(artwork)return artwork;
  const library=await libraryRoutes(request,env,auth,path);if(library)return library;

@@ -15,9 +15,12 @@ export async function deleteBlob(key){
  try{await (await navigator.storage.getDirectory()).removeEntry(key);}catch{}
  const db=await database();try{await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite'),store=tx.objectStore('files');store.delete(key);store.delete(`mime-${key}`);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}finally{db.close();}
 }
-export async function getArt(albumId,filename){
+/** @param {string | null | undefined} [key] */
+export async function getArt(albumId,filename,key){
  if(!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(albumId)||!['96.webp','600.webp','generated-512.png'].includes(filename))return undefined;
- const manifest=await idbFile(`art-manifest-${albumId}`);
+ // Explicit keys come from the authorised album row. Undo can therefore switch
+ // back to an older immutable cover without rewriting a second manifest DB.
+ const manifest=key===undefined?await idbFile(`art-manifest-${albumId}`):key?{key}:null;
  if(manifest){const blob=await getBlob(`${manifest.key}-${filename}`);if(blob)return blob;if(filename==='96.webp')return getBlob(`${manifest.key}-600.webp`);return undefined;}
  return getBlob(`art-${albumId}`);
 }

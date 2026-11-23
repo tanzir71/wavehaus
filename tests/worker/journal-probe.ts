@@ -2,14 +2,15 @@
 // entry point and is not included in either release archive.
 import {writeJournal,type JournalWrite} from '../../server-worker/src/journal';
 import {readJournalChanges,readJournalRows} from '../../server-worker/src/journal-read';
+import {journalRoutes} from '../../server-worker/src/journal-routes';
 import {all,one,run,stmt} from '../../server-worker/src/db';
 import {ulid} from '../../server-worker/src/crypto';
 import type {Env,Auth,User} from '../../server-worker/src/types';
-import {undoPlan,type JournalRow} from '../../shared/journal';
+import type {JournalRow} from '../../shared/journal';
 import {UploadError} from '../../shared/upload-input';
 const owner='01J'+'0'.repeat(19)+'9000';
 async function state(env:Env){return {
- tracks:await all<JournalRow>(env.DB,'SELECT id,owner_id,album_id,title,rev,deleted FROM tracks ORDER BY id'),
+ tracks:await all<JournalRow>(env.DB,'SELECT id,owner_id,album_id,artist_id,title,rev,deleted FROM tracks ORDER BY id'),
  albums:await all<JournalRow>(env.DB,'SELECT id,owner_id,title,art_key,rev,deleted FROM albums ORDER BY id'),
  changes:await all(env.DB,'SELECT id,summary,undoable,undone_at FROM changes ORDER BY created_at,id'),
  guardCount:(await one<{n:number}>(env.DB,'SELECT COUNT(*) AS n FROM mutation_guards'))!.n,
@@ -18,9 +19,11 @@ async function state(env:Env){return {
 };}
 export default {async fetch(request:Request,env:Env){try{
  const path=new URL(request.url).pathname;if(path==='/_ready')return Response.json({ok:true});if(path==='/state')return Response.json(await state(env));
- const input=await request.json() as JournalWrite&{changeIds:string[];actor?:string;rowId?:string;mode?:string};
+ const input=(request.method==='GET'?{}:await request.json()) as JournalWrite&{changeIds:string[];actor?:string;rowId?:string;mode?:string};
  const user=await one<User>(env.DB,'SELECT * FROM users WHERE id=?',input.actor||owner);if(!user)return new Response(null,{status:401});
  const auth={user,session:{device_label:'Journal integration'}} as Auth;
+ if(path.startsWith('/api/changes'))return await journalRoutes(request,env,auth,path)||new Response(null,{status:404});
+ if(path==='/same-time'){await run(env.DB,'UPDATE changes SET created_at=?',Date.now());return Response.json({ok:true});}
  if(path==='/apply')return Response.json(await writeJournal(env,auth,input));
  if(path==='/legacy'){
   await run(env.DB,'UPDATE tracks SET lyrics=?,peaks=? WHERE id=?','Line\n'.repeat(30000),btoa('\0'.repeat(1000)),input.rowId);
@@ -32,8 +35,8 @@ export default {async fetch(request:Request,env:Env){try{
   return Response.json({changeId,loadedFields:[...rows.values()].map(row=>Object.keys(row)),snapshots:changes[0].ops});
  }
  if(path==='/undo'){
-  const records=await readJournalChanges(env,auth,input.changeIds),map=await readJournalRows(env,records.flatMap(change=>change.ops)),plan=undoPlan(records,map);
-  return Response.json(await writeJournal(env,auth,{summary:'Undid integration edit',ops:plan.ops,guards:plan.guards,undoIds:plan.changeIds,undoable:false}));
+  const forwarded=new Request(new URL('/api/changes/undo',request.url),{method:'POST',headers:{'Content-Type':'application/json','X-Wavehaus':'1'},body:JSON.stringify({ids:input.changeIds})});
+  return await journalRoutes(forwarded,env,auth,'/api/changes/undo')||new Response(null,{status:404});
  }
  return new Response(null,{status:404});
  }catch(error){return Response.json({error:{code:error instanceof UploadError?error.code:'internal',message:error instanceof Error?error.message:'Failure'}},{status:error instanceof UploadError?error.status:500});}

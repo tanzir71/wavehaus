@@ -23,6 +23,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run test:api
+      - run: npm run test:journal:demo
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
@@ -33,6 +34,7 @@ jobs:
       - run: npm run test:migrations
       - run: npm run test:migrations:worker
       - run: npm run test:journal
+      - run: npm run test:journal:php
       - run: npm run test:php
         env:
           RUN_LARGE_UPLOAD: '1'

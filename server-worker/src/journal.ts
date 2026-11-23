@@ -1,14 +1,9 @@
-import {journalColumns,JournalConflict,type JournalOp,type JournalTable} from '../../shared/journal';
+import {journalColumns,JournalConflict,type JournalTable,type JournalWrite,type CountGuard} from '../../shared/journal';
 import {ulid} from './crypto';
 import {stmt} from './db';
 import {fail} from './http';
 import type {Auth,Env,Statement} from './types';
-export interface RowGuard {table:JournalTable;id:string;rev:number}
-export interface CountGuard {table:'tracks'|'albums';column:'album_id'|'artist_id';id:string;count:number}
-export interface JournalWrite {
- summary:string;ops:JournalOp[];guards?:RowGuard[];counts?:CountGuard[];
- appendTo?:string;undoIds?:string[];undoable?:boolean;
-}
+export type {RowGuard,CountGuard,JournalWrite} from '../../shared/journal';
 const tables:JournalTable[]=['artists','albums','tracks'];
 const encoder=new TextEncoder();
 function chunks<T>(rows:T[]){

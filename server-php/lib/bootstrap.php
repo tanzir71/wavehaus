@@ -8,7 +8,7 @@ const WH_VERSION = '0.4.0';
 const WH_SCHEMA = 5;
 
 final class ApiException extends RuntimeException {
-    public function __construct(public string $errorCode, string $message, int $status = 400, public ?int $retryAfter = null) { parent::__construct($message, $status); }
+    public function __construct(public string $errorCode, string $message, int $status = 400, public ?int $retryAfter = null, public ?array $conflicts = null) { parent::__construct($message, $status); }
 }
 function fail(string $code, string $message, int $status = 400, ?int $retryAfter = null): never { throw new ApiException($code, $message, $status, $retryAfter); }
 function now_ms(): int { return (int)floor(microtime(true) * 1000); }

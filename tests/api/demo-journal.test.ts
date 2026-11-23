@@ -1,0 +1,35 @@
+import {beforeAll,afterAll,it,expect} from 'vitest';
+import {startDemo,stopDemo,demoPage} from './demo-shim';
+beforeAll(async()=>{await startDemo();await demoPage().addScriptTag({type:'module',content:"import {mutate,readState} from '/src/demo/store.ts';import {demoWriteJournal} from '/src/demo/journal.ts';import {id} from '/src/library/ids.ts';import {getBlob} from '/runtime/media.js';window.__whJournal={mutate,readState,demoWriteJournal,id,getBlob};"});await demoPage().waitForFunction(()=>!!(window as any).__whJournal);});afterAll(stopDemo);
+it('round-trips a 500-track journal, restores artwork and denies tombstoned service-worker media',async()=>{
+ const result=await demoPage().evaluate(async()=>{
+  const {mutate,readState,demoWriteJournal,id,getBlob}=(window as any).__whJournal;
+  const fetcher=(window as any).__whFetch as typeof fetch,ensure=(value:unknown,message:string)=>{if(!value)throw new Error(message);},request=async(path:string,body:unknown)=>{const response=await fetcher(path,{method:'POST',headers:{'Content-Type':'application/json','X-Wavehaus':'1'},body:JSON.stringify(body)});return {status:response.status,body:await response.json()};};
+  const initial=await readState(),base=initial.tracks[0],album=initial.albums.find((album:any)=>album.id===base.album_id),selected:string[]=[];
+  await mutate((state:any)=>{for(let i=0;i<500;i++){const trackId=id();selected.push(trackId);state.tracks.push({...base,id:trackId,title:'Original '+i,storage_key:'audio-'+trackId,rev:++state.rev});}});
+  const changed=await mutate((state:any)=>demoWriteJournal(state,{summary:'Renamed 500 tracks',ops:selected.map((trackId,i)=>{const track=state.tracks.find((track:any)=>track.id===trackId);return {table:'tracks',id:trackId,before:{id:trackId,rev:track.rev,title:track.title},after:{id:trackId,rev:track.rev,title:'Renamed '+i}};})}));
+  let state=await readState();ensure(selected.every((trackId,i)=>state.tracks.find((track:any)=>track.id===trackId).title==='Renamed '+i),'All 500 titles must change.');ensure(state.changes.filter((change:any)=>change.id===changed.changeId).length===1,'The batch must have one journal.');
+  const stale=await request('/api/changes/'+changed.changeId+'/undo',{});ensure(stale.status===200,'The real undo endpoint must succeed.');state=await readState();ensure(selected.every((trackId,i)=>state.tracks.find((track:any)=>track.id===trackId).title==='Original '+i),'Undo must restore all original titles.');
+  const again=await request('/api/changes/'+changed.changeId+'/undo',{});ensure(again.status===409,'Undo must not repeat an already undone action.');
+  const staleChange=await mutate((state:any)=>{const track=state.tracks.find((track:any)=>track.id===selected[0]);return demoWriteJournal(state,{summary:'First edit',ops:[{table:'tracks',id:track.id,before:{id:track.id,rev:track.rev,title:track.title},after:{id:track.id,rev:track.rev,title:'First'}}]});});
+  await mutate((state:any)=>{const track=state.tracks.find((track:any)=>track.id===selected[0]);return demoWriteJournal(state,{summary:'Later edit',ops:[{table:'tracks',id:track.id,before:{id:track.id,rev:track.rev,title:track.title},after:{id:track.id,rev:track.rev,title:'Later'}}]});});
+  ensure((await request('/api/changes/'+staleChange.changeId+'/undo',{})).status===409,'A later revision must prevent undo.');
+  const digest=async(response:Response)=>{ensure(response.ok,'Artwork must be served.');return [...new Uint8Array(await crypto.subtle.digest('SHA-256',await response.arrayBuffer()))].map(byte=>byte.toString(16).padStart(2,'0')).join('');};
+  ensure(navigator.serviceWorker.controller,'The real service worker must control the page.');
+  const originalArt=await digest(await fetch('/demo-art/'+album.id+'/generated-512.png?v='+album.rev,{cache:'no-store'}));
+  const canvas=new OffscreenCanvas(512,512),context=canvas.getContext('2d')!;context.fillStyle='#7b1521';context.fillRect(0,0,512,512);const form=new FormData();form.set('generated512',await canvas.convertToBlob({type:'image/png'}),'generated-512.png');
+  const previous=new Set(state.changes.map((change:any)=>change.id)),artResponse=await fetcher('/api/albums/'+album.id+'/art',{method:'PUT',headers:{'X-Wavehaus':'1'},body:form});ensure(artResponse.ok,'Generated artwork upload must succeed.');
+  state=await readState();const artChange=state.changes.find((change:any)=>!previous.has(change.id)&&change.summary.startsWith('Updated artwork')),newAlbum=state.albums.find((value:any)=>value.id===album.id);
+  const newArt=await digest(await fetch('/demo-art/'+album.id+'/generated-512.png?v='+newAlbum.rev,{cache:'no-store'}));ensure(newArt!==originalArt,'The new cover must be visible.');ensure((await request('/api/changes/'+artChange.id+'/undo',{})).status===200,'Artwork undo must succeed.');
+  state=await readState();const restoredAlbum=state.albums.find((value:any)=>value.id===album.id),restoredArt=await digest(await fetch('/demo-art/'+album.id+'/generated-512.png?v='+restoredAlbum.rev,{cache:'no-store'}));ensure(restoredArt===originalArt,'The service worker must follow the restored album key.');
+  const media='/demo-media/'+base.id;ensure((await fetch(media,{headers:{Range:'bytes=0-15'}})).status===206,'Seed audio must be range-capable.');
+  await mutate((state:any)=>{const track=state.tracks.find((track:any)=>track.id===base.id);track.owner_id=id();track.rev=++state.rev;});ensure((await fetch(media)).status===403,'A signed-in owner cannot bypass another uploader’s privacy.');
+  let importId='';await mutate((state:any)=>{const track=state.tracks.find((track:any)=>track.id===base.id);track.owner_id=state.user.id;track.rev=++state.rev;importId=id();state.changes.unshift({id:importId,user_id:state.user.id,actor:'web',session_label:'Fixture import',summary:'Fixture import',ops:[{table:'tracks',id:track.id,before:null,after:{...track}}],created_at:Date.now(),undone_at:null});});
+  ensure((await request('/api/changes/'+importId+'/undo',{})).status===200,'An import must undo to a tombstone.');ensure((await fetch(media)).status===404,'The service worker must deny a tombstoned track.');ensure((await fetcher(media)).status===404,'The demo API must deny it too.');ensure((await getBlob('audio-'+base.id))?.size>44,'Undo must retain the original audio bytes.');
+  await mutate((state:any)=>{const now=Date.now();for(const change of state.changes)change.created_at=now;});state=await readState();const seen:string[]=[];let cursor:string|null=null;
+  do{const response=await fetcher('/api/changes?limit=1'+(cursor?'&cursor='+encodeURIComponent(cursor):'')),page=await response.json();seen.push(...page.items.map((change:any)=>change.id));cursor=page.nextCursor;}while(cursor);
+  ensure(new Set(seen).size===state.changes.length&&seen.length===state.changes.length,'Equal timestamps must not lose or duplicate activity.');
+  return {renamed:500,undo:true,staleConflict:409,artRestored:restoredArt===originalArt,deletedMedia:404,bytesRetained:true,activityCount:seen.length};
+ });
+ expect(result).toMatchObject({renamed:500,undo:true,staleConflict:409,artRestored:true,deletedMedia:404,bytesRetained:true});
+});
