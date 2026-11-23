@@ -1,16 +1,30 @@
 # Wavehaus
 
-Your music, at home. A self-hosted music streaming PWA that installs from the browser and supports screen-off playback through Brave.
+Your music, at home. A self-hosted music streaming PWA that installs from the browser, with the Brave route for screen-off listening.
 
-[Project site](https://tanzir71.github.io/wavehaus/) · [Try the app](https://tanzir71.github.io/wavehaus/app/) · [Changelog](https://tanzir71.github.io/wavehaus/changelog/)
+[Project site](https://tanzir71.github.io/wavehaus/) · [Browser demo](https://tanzir71.github.io/wavehaus/app/) · [Download 1.0](https://github.com/tanzir71/wavehaus/releases/tag/v1.0.0) · [Docs](https://tanzir71.github.io/wavehaus/docs/)
 
-## M2 preview
+## Wavehaus 1.0
 
-The browser demo generates twelve original tracks across three albums. You can play, scrub, browse, like, queue and upload music. Demo uploads and listening data stay in that browser. Clearing site data removes them.
+- Original-file uploads from files, folders, drag/drop or Android sharing; resumable chunks, local tags/art/waveforms, duplicate detection and import review.
+- Waveform playback, persistent queue, Media Session, sleep timer, radio, daily mixes and smart shuffle. Search and recommendations stay on the device.
+- Private-by-default tracks/albums/folders/playlists, member access modes, referrals, quotas, recovery codes and revocable device sessions.
+- Bulk tags/rename/artwork, attributed Activity and guarded 30-day Undo. Assistants can use accessible browser controls or scoped API tokens and the packaged MCP server.
+- Offline downloads with byte-range seeking, storage/persistence controls, embedded/LRC lyrics, private moments and A–B loops.
 
-The preview also has sign-in, recovery codes, device pairing and settings. The demo starts as `demo` with initial password `wavehaus-demo`; its accounts and pairing are simulated in that browser. PHP and Worker releases use real secure HTTP-only cookies and support owner setup, recovery and device sessions. Both servers now support resumable uploads, artwork, private library sync and authenticated streaming. The player has persistent queues, background-play guides, radio and smart shuffle. Library search and recommendations run on the device; private playlists support editing, reordering and Undo. See [implementation progress](docs/PROGRESS.md) for remaining milestones and verification boundaries.
+The Pages demo generates twelve original tracks across three albums. Its accounts, uploads and media stay in that browser. Initial credentials are `demo` / `wavehaus-demo`; production has its own owner setup and secure HTTP-only sessions. Clearing browser site data removes demo originals and downloads.
 
-## Run locally
+## Deploy
+
+Download either archive from [GitHub Releases](https://github.com/tanzir71/wavehaus/releases/latest).
+
+**Shared hosting:** PHP 8.1+ with PDO SQLite, mbstring, openssl and fileinfo; Apache/LiteSpeed with HTTPS and .htaccess. Upload/extract the zip, preserve a private writable data directory outside the web root, then open `/setup`. No Node, Composer, shell or database server is needed on the host. [Installation guide](https://tanzir71.github.io/wavehaus/docs/shared-hosting/).
+
+**Cloudflare:** Workers + D1 + R2. Use Node 24 locally, `npm ci` in server-worker, set the database/bucket bindings and APP_SECRET, then `npm run deploy`. Keep the existing bindings and secrets on updates. [Installation guide](https://tanzir71.github.io/wavehaus/docs/cloudflare/).
+
+Production defaults to `/`. Build with `APP_BASE=/music/` for a subpath and keep the same base on upgrades. The project landing stays on GitHub Pages; a server owner's visitor website is outside this project. Public music is available to signed-in members, without anonymous streaming.
+
+## Run and build
 
 Use Node 24:
 
@@ -19,33 +33,26 @@ npm ci
 npm run dev:demo
 ```
 
-For PHP development install PHP 8.1+ with pdo_sqlite, mbstring, openssl and fileinfo, then run `npm run dev`. For Worker development run `npm ci --prefix server-worker` and `npm run dev:worker`. Local stores live in `.data/`; local secrets are excluded from Git.
+`npm run dev` starts Vite plus PHP. `npm run dev:worker` starts Vite plus Wrangler after `npm ci --prefix server-worker`. Local data/secrets stay outside the public directory and Git.
 
 ```sh
-npm run lint
-npm test
-npm run test:api
 npm run build
-npm run test:php
-npm run test:worker
 npm run build:pages
-npm run e2e
+npm run package
 ```
 
-`npm run build` produces `app/dist` (production base `/`) and `landing/dist`. Set `APP_BASE` to a path such as `/music/` before building to serve the app under that path. `npm run build:pages` keeps the demo at `/wavehaus/app/` and assembles the project site under `/wavehaus/`. `npm run preview` serves it locally. The Upload route and tag parser load separately from the initial app.
+Build outputs are app/dist and landing/dist; Pages assembles site/ at `/wavehaus/` with demo `/app/`. Packaging creates both versioned server zips in dist/. Upload and music-metadata are lazy; the initial JavaScript budget is enforced during builds. No dependencies were added beyond the approved list and pinned deployment tooling. [Dependency decisions](docs/DEPENDENCIES.md).
 
-`npm run package` builds both server zips in `dist/`. Install/update instructions are included in each archive. `python tests/package/redeploy.py` independently validates the zips and verifies two application overwrites against a disposable PHP store; it needs only Python's standard library. `BASE_URL=… npm run test:api` targets an HTTP backend (use a disposable database and TEST_USERNAME/TEST_PASSWORD for an existing fixture account).
+Existing lint/test/API/e2e commands remain in package.json for future use. **The owner explicitly disabled further testing for this implementation.** Publication runs builds only; current browser/device behavior and Lighthouse targets are unverified. Historical measured results remain in [progress](docs/PROGRESS.md).
 
-## Background play
+## Listening and assistants
 
-Open the app in Brave on Android, enable **Settings → Media → Background play**, then install from the browser menu. In Wavehaus, open **Settings → Background play** and run the 30-second screen-off test. Physical-device acceptance is recorded separately from Android viewport emulation.
+On Android Brave, enable Settings → Media → Background play and install from the browser menu. The in-app Background play guide includes Android/iPhone shortcut methods and an optional device check. iPhone background playback remains best effort; device/codec support varies. Wavehaus does not transcode.
 
-## Implementation source
+Download albums/playlists/tracks before going offline. Copies are scoped to this browser/account and its last authenticated session expiry. Sign-out removes downloads; connected clients refresh permissions. A disconnected client learns sharing changes after reconnecting. Downloads are separate from backups.
 
-[AGENTS.md](AGENTS.md) defines the build rules. The supplied handover, including design exports, brand assets, tokens and API/schema specifications, is preserved in [handover](handover/). A visitor website is outside this project's scope. Music and artwork require a signed-in session in P0.
+[Assistant setup and tools](tools/README.md) · [Offline/lyrics/moments](docs/m9-listening.md) · [Deployment and upgrade operations](docs/operations.md).
 
-Runtime dependencies: Preact, Signals, idb-keyval, MiniSearch and lazy-loaded music-metadata. Plain CSS, a hand-written service worker and original generated audio. [Dependency decisions](docs/DEPENDENCIES.md).
+The original handover is preserved unchanged in [handover/](handover/). P2 work such as crossfade, ReplayGain and expiring external share links remains outside the 1.0 milestones.
 
-MIT licensed. Geist fonts retain the OFL; icon and photography credits are included with the assets.
-
-Assistants can use the labelled browser UI or [scoped tokens and the MCP server](tools/README.md). Build-only publication follows the owner's instruction to stop further testing.
+MIT licensed. Geist fonts retain the OFL; icon and photography credits accompany the assets. No copyrighted demo audio is committed.

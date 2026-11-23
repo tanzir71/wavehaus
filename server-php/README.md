@@ -1,6 +1,6 @@
-# Wavehaus shared hosting — M3
+# Wavehaus shared hosting — 1.0
 
-Owner setup, sign-in, recovery, device pairing, settings, resumable uploads, artwork, library sync and authenticated streaming are implemented. M3 adds playback persistence and listening history. The Pages demo uses its own browser-local backend.
+Wavehaus 1.0 includes browser setup/recovery, revocable device sessions, resumable uploads, private library sync, streaming, search/mixes, playlists, bulk editing and 30-day Undo, visibility/access controls, scoped assistant tokens and MCP tools. Offline downloads, lyrics, moments and A–B loops run in the PWA. The Pages demo uses a separate browser-local backend.
 
 1. In cPanel create a subdomain, with PHP 8.1+ and the pdo_sqlite, mbstring, openssl and fileinfo extensions enabled.
 2. Upload and extract the shared-hosting zip into that domain's document root. Enable HTTPS. Apache/LiteSpeed must honour the included `.htaccess`.
@@ -25,3 +25,7 @@ The normal PHP media streamer works without optional modules. Hosts with Apache
 see [media offload configuration](https://github.com/tanzir71/wavehaus/blob/main/docs/media-offload.md)
 (also included as `MEDIA-OFFLOAD.md` in the zip). Do not enable its
 private config flags before configuring and checking the host's media mapping.
+
+Both archives include tools/mcp.mjs and built companion files. Configure WAVEHAUS_URL and WAVEHAUS_TOKEN locally; see tools/README.md. This CLI is optional and never runs on the PHP host.
+
+The 1.0 release was packaged and published without additional testing at the owner’s request. Device background playback and browser-specific behavior remain unverified beyond the historical results in the source repository.
