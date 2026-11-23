@@ -15,7 +15,8 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  try{
   const url=new URL(request.url),path=relativePath(url.pathname);
   if(path===null)fail('not_found','Not found.',404);
-  if(path.startsWith('/api/')||path.startsWith('/media/')||path.startsWith('/art/')){
+  if(APP_BASE!=='/'&&url.pathname===APP_BASE.slice(0,-1)){url.pathname=APP_BASE;response=Response.redirect(url,308);}
+  else if(path.startsWith('/api/')||path.startsWith('/media/')||path.startsWith('/art/')){
    let schema;try{schema=await one<{version:number}>(env.DB,'SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations');}catch{fail('migrations_pending','Apply the D1 migrations before opening Wavehaus.',503);}
    if(!schema||schema.version!==SCHEMA)fail('migrations_pending','Apply the matching D1 migrations before deploying this release.',503);
    if(!env.APP_SECRET||new TextEncoder().encode(env.APP_SECRET).length<32)fail('configuration','Set APP_SECRET with wrangler secret put APP_SECRET (at least 32 random bytes).',503);

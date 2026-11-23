@@ -18,7 +18,9 @@ header('Referrer-Policy: same-origin');
 header('Permissions-Policy: camera=(self)');
 header("Content-Security-Policy: default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
 try {
-    $path=app_relative_path(rawurldecode(parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/'));$method=$_SERVER['REQUEST_METHOD']??'GET';
+    $requestPath=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
+    if(app_base()!=='/'&&$requestPath===rtrim(app_base(),'/')){$query=parse_url($_SERVER['REQUEST_URI'],PHP_URL_QUERY);header('Location: '.app_base().($query!==null?'?'.$query:''),true,308);exit;}
+    $path=app_relative_path(rawurldecode($requestPath));$method=$_SERVER['REQUEST_METHOD']??'GET';
     if($path===null)fail('not_found','Not found.',404);
     if(str_contains($path,"\0")||str_contains($path,'..')||preg_match('~^/(?:lib|migrations|data[^/]*|\.)~',$path))fail('not_found','Not found.',404);
     if(str_starts_with($path,'/api/')){
