@@ -7,7 +7,7 @@ import { libraryRoutes } from './library';
 import { uploadsRoutes } from './uploads';
 import { artworkRoutes } from './art';
 import { playbackRoutes } from './playback';
-export const VERSION='0.3.0',SCHEMA=4;
+export const VERSION='0.4.0',SCHEMA=4;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
  if(path==='/api/health'&&method==='GET')return json({ok:true,version:VERSION,schema:SCHEMA,backend:'worker',needsSetup:!await one(env.DB,'SELECT id FROM users LIMIT 1')});

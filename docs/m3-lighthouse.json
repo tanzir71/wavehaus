@@ -1,0 +1,19 @@
+{
+  "lighthouse": "13.6",
+  "viewport": "mobile",
+  "date": "2026-11-23",
+  "reports": {
+    "home": {
+      "accessibility": 100,
+      "zeroScoreAudits": []
+    },
+    "now-playing": {
+      "accessibility": 100,
+      "zeroScoreAudits": []
+    },
+    "queue": {
+      "accessibility": 100,
+      "zeroScoreAudits": []
+    }
+  }
+}
