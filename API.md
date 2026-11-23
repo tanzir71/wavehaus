@@ -68,23 +68,12 @@ Contract tests in `/tests/api` assert every endpoint below against `BASE_URL`.
 
 `TrackInput` = the tags/organise result from the client (title, artist, albumArtist, album, trackNo, discNo, year, genre, bpm, durationMs, codec, container, bitrate, sampleRate, bitDepth, channels, replaygain, lyrics, lyricsSynced, originalName, originalPath, organiseSource). `AlbumInput` = `{ title, artistName, year, folderPath, artSource, existingAlbumId? }`.
 
-## Public (no session): instance homepage (`HOMEPAGE.md`)
-| Method | Path | Notes |
-|---|---|---|
-| GET | `/` | Server-rendered homepage, with the showcase JSON inlined. If the homepage is off, it 302s to `/app/` |
-| GET | `/api/public/home` | `{ site:{ title, eyebrow, intro, owner, host, links[], githubUrl, showOss, registrationMode }, featured:{ type, id, title, artist, year, art, tracks:[{ id, title, trackNo, durationMs, peaks }] }, showcase:[{ type, id, title, meta, tint, art, trackCount }] }`. Only showcased **public** items |
-| GET | `/api/public/showcase/:type/:id` | the tracks of one showcased item (same track shape) |
-| GET/HEAD | `/media/:trackId` | Also allowed **without a session** when the track belongs to a showcased item: rate-limited 300 per 10 min per IP, `Range` supported, `Cache-Control: public, max-age=600`. Otherwise 401 |
-| GET | `/art/:albumId/*`, `/art/home-og.png` | same rule as media |
-| POST | `/api/public/plays` | `{ itemType, itemId, trackId }`, an anonymous play counter (no identifiers stored) → `showcase_stats` |
-
 ## Admin (owner/admin)
 | Method | Path | Notes |
 |---|---|---|
 | GET/PATCH | `/api/admin/settings` | registration mode, upload permission, quotas, invites per member, spam settings, library rules |
 | GET/PATCH | `/api/admin/users`, `/api/admin/users/:id` | role, quota, status, invitesLeft |
 | GET/POST | `/api/admin/requests`, `/api/admin/requests/:id/{approve,deny}` | approve creates a one-time invite or account |
-| GET/PUT | `/api/admin/homepage` | `{ enabled, title, eyebrow, intro, owner, featured:{type,id}, items:[{type,id}], allowAnonymousPlay, showOss, githubUrl, links:[{label,url}] }`. Adding a private item returns `409 needs_public` with counts, so the UI can offer "Make public and feature". Upload `og` image with `PUT /api/admin/homepage/og` (png 1200×630) |
 | GET/POST/DELETE | `/api/invites` | members create invites if `invites_left > 0` (referrals) |
 
 ## Status codes used

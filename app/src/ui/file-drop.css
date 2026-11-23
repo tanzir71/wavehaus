@@ -1,0 +1,1 @@
+.global-drop{position:fixed;inset:0;z-index:80;background:var(--wh-bg-base);opacity:.97;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;pointer-events:none}.global-drop>svg{color:var(--wh-accent-300)}

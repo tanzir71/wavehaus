@@ -13,3 +13,9 @@ Wrangler 4.166.0 is pinned separately in `server-worker/package.json` as deploym
 Pairing uses a small local QR encoder (Model 2, version 6/L), independently decoded with OpenCV 4.12.0 during verification. Neither QR generation nor pairing sends secrets to an external service. OpenCV is an optional verification tool only.
 
 Release archives use Node's built-in zlib and a ZIP writer. The independent archive/redeploy test uses Python's standard-library zipfile/SQLite/HTTP modules; no Python package or Python runtime is needed to build, package or host Wavehaus.
+
+M2's committed audio fixtures are original generated tones. The optional maintenance generator uses installed SoundFile 0.13.1/libsndfile and NumPy to encode PCM directly into the test formats; it does not use ffmpeg or transcode user music. Those tools are not build, runtime or CI dependencies.
+
+The M4A fixture is original ALAC audio written by a small standard-library Python generator, using the documented escape-packet format and MP4 sample tables. Its packets were independently decoded with libsndfile and matched the generated PCM exactly. The installed Chromium does not decode ALAC; tags and upload support do not imply that every browser can play every codec. No encoder is shipped in Wavehaus.
+
+Large-file acceptance uses legal FLAC padding metadata around an original two-second stream. The ignored 300 MB artifact independently decodes to the same PCM as the tiny fixture, and is generated with Node's standard library during tests.

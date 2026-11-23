@@ -2,6 +2,7 @@ Options -Indexes
 RewriteEngine On
 RewriteRule ^(?:lib|migrations|data[^/]*)(?:/|$) - [F,L]
 RewriteRule (^|/)\. - [F,L]
+RewriteRule ^app/?$ index.php [QSA,L]
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 RewriteRule ^ index.php [QSA,L]

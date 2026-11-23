@@ -1,3 +1,4 @@
+import { beginBusy } from '../ui/busy';
 import { useEffect,useRef,useState } from 'preact/hooks';
 import { api } from '@backend';
 import { json } from '../api/types';
@@ -21,13 +22,13 @@ export function AuthScreen({path}:{path:string}){
  const video=useRef<HTMLVideoElement>(null),camera=useRef<MediaStream|null>(null),[scanning,setScanning]=useState(false);
  useEffect(()=>{if(pair&&location.hash)history.replaceState(null,'',location.pathname+location.search);return()=>{camera.current?.getTracks().forEach(t=>t.stop());camera.current=null;};},[]);
  const complete=()=>location.assign(href('/'));
- const submit=async(e:Event)=>{e.preventDefault();setWorking(true);setError('');document.body.dataset.busy='true';try{
+ const submit=async(e:Event)=>{e.preventDefault();setWorking(true);setError('');const finishBusy=beginBusy();try{
   if(setup){if(api.demo){await api.request('/api/admin/settings',json({server_name:serverName},'PATCH'));const result=await api.request<{recoveryCodes:string[]}>('/api/auth/recovery-codes',json({password}));setRecovery(result.recoveryCodes);}else{const result=await api.request<{recoveryCodes:string[]}>('/api/setup',json({username,password,serverName,deviceLabel:device}));setRecovery(result.recoveryCodes);}}
   else if(reset){const result=await api.request<{recoveryCodes:string[];removeResetFlag?:boolean}>('/api/setup/reset',json({resetString:code,newPassword:password}));setRecovery(result.recoveryCodes);setResetFlag(!!result.removeResetFlag);}
   else if(mode==='recover'){await api.request('/api/auth/recover',json({username,recoveryCode:code,newPassword:password,deviceLabel:device}));complete();}
   else if(mode==='pair'){await api.request('/api/auth/pair/claim',json({...secret?{secret}:{code},deviceLabel:device}));complete();}
   else{await api.request('/api/auth/login',json({username,password,deviceLabel:device}));complete();}
- }catch(reason){setError((reason as Error).message);}finally{setWorking(false);document.body.dataset.busy='false';}};
+ }catch(reason){setError((reason as Error).message);}finally{setWorking(false);finishBusy();}};
  const scan=async()=>{
   setError('');const Detector=(window as unknown as {BarcodeDetector?:new(options:{formats:string[]})=>{detect(video:HTMLVideoElement):Promise<{rawValue:string}[]>}}).BarcodeDetector;
   if(!Detector){setError('Use your phone’s camera app to scan the QR, or enter the six-digit code below.');return;}

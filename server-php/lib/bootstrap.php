@@ -4,8 +4,8 @@ declare(strict_types=1);
 // Private-directory discovery, atomic writes and error copy are adapted from
 // the owner's Tack backend/bootstrap.php. See REFERENCES.md for the port map.
 ini_set('display_errors', '0');
-const WH_VERSION = '0.1.0';
-const WH_SCHEMA = 2;
+const WH_VERSION = '0.2.0';
+const WH_SCHEMA = 4;
 
 final class ApiException extends RuntimeException {
     public function __construct(public string $errorCode, string $message, int $status = 400, public ?int $retryAfter = null) { parent::__construct($message, $status); }
@@ -37,8 +37,9 @@ function data_dir(): string {
     static $directory;
     if ($directory) return $directory;
     $custom = getenv('WAVEHAUS_DATA_DIR');
-    $publicRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__) . '/public') ?: dirname(__DIR__) . '/public';
-    $normalized = str_replace('\\', '/', $publicRoot);
+    $documentRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__) . '/public') ?: dirname(__DIR__) . '/public';
+    $publicRoot = defined('WH_PUBLIC_ROOT') ? WH_PUBLIC_ROOT : $documentRoot;
+    $normalized = str_replace('\\', '/', $documentRoot);
     if ($custom) $directory = $custom;
     else {
         $home = getenv('HOME') ?: dirname($publicRoot);
@@ -52,7 +53,11 @@ function data_dir(): string {
         $lock = @fopen($publicRoot . '/.wavehaus-data.lock', 'c');
         if (!$lock || !flock($lock, LOCK_EX)) fail('data_not_writable', 'Create the data directory ' . $directory . ' and make it writable by PHP (chmod 755).', 503);
         try {
-            $matches = array_filter(glob($publicRoot . '/data-*', GLOB_ONLYDIR) ?: [], fn($path) => preg_match('/^data-[a-f0-9]{24}$/D', basename($path)) && is_file($path . '/.wavehaus'));
+            // Preserve discovery for an older nested install that put its
+            // fallback under DOCUMENT_ROOT. New fallback storage stays beside
+            // this app's front controller and its protective rewrite rules.
+            $candidates=[];foreach(array_unique([$publicRoot,$documentRoot]) as $root)$candidates=array_merge($candidates,glob($root.'/data-*',GLOB_ONLYDIR)?:[]);
+            $matches = array_values(array_filter(array_unique($candidates), fn($path) => preg_match('/^data-[a-f0-9]{24}$/D', basename($path)) && is_file($path . '/.wavehaus')));
             if (count($matches) > 1) fail('configuration', 'More than one Wavehaus data directory exists. Set WAVEHAUS_DATA_DIR to the directory to use.', 503);
             $directory = count($matches) ? reset($matches) : $publicRoot . '/data-' . bin2hex(random_bytes(12));
             if (!is_dir($directory) && !@mkdir($directory, 0700)) fail('data_not_writable', 'Create the data directory ' . $directory . ' and make it writable by PHP (chmod 755).', 503);

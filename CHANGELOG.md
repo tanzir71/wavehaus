@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.0 — M2 · 2026-11-23
+
+Drop in your music. Pick up where you left off.
+
+- Resumable, verified uploads on PHP, Worker/R2 and the browser demo, with immutable chunks, quota checks and duplicate detection.
+- Browser workers read tags and hash large files in bounded slices. Three files and two chunks per file can run in parallel; reloads retain the file and analysis.
+- Embedded and folder artwork, 600/96 WebP covers, generated PNG artwork, waveform gating and lyric sidecars.
+- File/folder pickers, full-window folder drop, the PWA share-target handler, a real screen-wake switch and Private/Public upload controls.
+- Immediate local library insertion and private second-device sync, with authenticated audio ranges and artwork on both servers.
+- Removed the unused visitor/Showcase schema; music and artwork require sign-in in P0.
+- Production builds default to `/` and accept `APP_BASE` for a subpath. The Pages demo keeps `/wavehaus/app/`.
+
+The cleanup is migration 0004 because M1 already shipped 0002_defaults.sql and M2 upload staging uses 0003. Existing migration history is preserved. A 300 MB generated FLAC passed throttled reload/resume on both servers. OS-level Android sharing and physical screen-lock playback remain unverified.
+
 ## v0.1.0 — M1 · 2026-11-23
 
 A home for your account, on every device.

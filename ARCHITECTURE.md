@@ -32,23 +32,11 @@ Purpose: every milestone is reviewable at `https://tanzir71.github.io/wavehaus/a
 - **Contract tests** run against the demo through a `fetch` shim (`tests/api/demo-shim.ts`), so the demo cannot drift from `API.md`.
 - **Base path.** Pages serves under `/wavehaus/`:
   - Vite `base: '/wavehaus/app/'`
-  - `manifest.webmanifest` `start_url: "./?source=homescreen"`, `scope: "./"` (relative)
+  - `manifest.webmanifest` `start_url: "./?source=homescreen"`, `scope: "./"`
   - service worker registered with `scope: './'`
   - every internal link relative to `import.meta.env.BASE_URL`
 
-  A production build uses base **`/app/`**, because `/` is the instance homepage (`HOMEPAGE.md`).
-
-## Routes on a deployed server (one origin)
-
-| Path | Served by |
-|---|---|
-| `/` | Instance homepage: server-rendered template + `home.js` (reuses `app/src/engine`) |
-| `/app/*` | The PWA (`app/dist`). SPA fallback to `/app/index.html`; manifest scope and service worker scope `/app/` |
-| `/join/:code`, `/pair`, `/setup` | Redirect into `/app/…` routes |
-| `/api/*`, `/media/*`, `/art/*` | API (`API.md`). Anonymous access only for showcased items |
-| `/share-target` | The app's service worker (`/app/` scope) handles it; the manifest `action` is `/app/share-target` |
-
-The session cookie is `Path=/`, so the homepage knows whether to show Sign in or Open the app.
+  A production build uses base `/` by default. The base is a build setting (`APP_BASE`), so the app can also be served from a subpath of an existing website, e.g. `/wavehaus/`. Manifest `start_url`/`scope` and the service worker scope follow it.
 
 ## Frontend
 

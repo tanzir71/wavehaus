@@ -115,7 +115,7 @@ function auth_routes(PDO $db, string $path, string $method): bool {
     if ($path==='/api/auth/pair' && $method==='POST') {
         $auth=current_auth($db);rate_limit($db,'pair-create',10,900,$auth['user']['id']);$secret=token(16);$expires=now_ms()+300000;
         $code=transaction($db,function()use($db,$auth,$secret,$expires){for($try=0;$try<10;$try++){$code=str_pad((string)random_int(0,999999),6,'0',STR_PAD_LEFT);$hash=hash('sha256',$code);if(query_one($db,'SELECT id FROM pairing_codes WHERE code_hash=? AND used_at IS NULL AND expires_at>?',[$hash,now_ms()]))continue;execute($db,'INSERT INTO pairing_codes(id,user_id,code_hash,secret_hash,expires_at) VALUES(?,?,?,?,?)',[ulid(),$auth['user']['id'],$hash,hash('sha256',$secret),$expires]);return $code;}fail('busy','Please try creating a code again.',503);});
-        $host=$_SERVER['HTTP_HOST'];$scheme=getenv('WAVEHAUS_DEV')==='1'?'http':'https';reply(['code'=>$code,'qrUrl'=>$scheme.'://'.$host.'/app/pair#'.$secret,'expiresAt'=>$expires]);
+        $host=$_SERVER['HTTP_HOST'];$scheme=getenv('WAVEHAUS_DEV')==='1'?'http':'https';reply(['code'=>$code,'qrUrl'=>$scheme.'://'.$host.app_base().'pair#'.$secret,'expiresAt'=>$expires]);
     }
     if ($path==='/api/auth/pair/claim' && $method==='POST') {
         $input=body();rate_limit($db,'pair-claim',10,900,client_ip(settings($db)));$label=device_label($input['deviceLabel']??null);$secret=isset($input['secret']);$raw=(string)($secret?$input['secret']:($input['code']??''));

@@ -110,8 +110,7 @@ Full rules, UI and acceptance tests are in **`VISIBILITY.md`**. The enforcement 
 - A public playlist shows only the items the viewer can play. It shows **no count, placeholder or duration** for the ones they can't, so nothing private leaks.
 - `/media/:id` and `/art/:albumId/*`: `403` unless the caller is the owner, or the row is public and the caller is a signed-in member.
 - Only the uploader changes their own visibility. Admins can force-private (takedown), never publish.
-- **Anonymous access exists only for the owner's showcase** (`HOMEPAGE.md`): tracks inside showcased public items, rate-limited per IP. Everything else needs a session. P2 share links are HMAC-signed, expiring, public-only and read-only.
-- The **homepage CTAs follow the registration mode**: closed → Sign in only; invite → code field; request → request form + code; open → create account (table in `HOMEPAGE.md`).
+- **There's no anonymous access** in P0. P2 share links are HMAC-signed, expiring, public-only and read-only.
 - Changing visibility is always logged in `changes`.
 
 ## Redeploys keep data (the Tack pattern)

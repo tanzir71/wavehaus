@@ -63,16 +63,6 @@
 - P0 Hardened engine (single audio element, Media Session, sync track advance).
 - P0 **Brave route** onboarding: detect Brave; "Open in Brave" handoff; per-platform steps (Background play / Enable Background Audio under Settings → Media); one-tap home-screen icon flow; 30-second self-test.
 
-### Instance homepage (the owner's site + app on one domain)
-- P0 **Homepage at `/`** (`HOMEPAGE.md`, Figma L6 `59:701` / L6m `60:767`):
-  - the owner's featured release, playable without an account, with the waveform player
-  - "Open the app" as the primary action (the app lives at `/app/`)
-  - more showcase items
-  - invite request / code / sign-up, depending on the registration mode
-  - a quiet GitHub link and open-source band
-- P0 **Settings → Homepage**: title, intro, featured item, showcase list, anonymous play on/off, GitHub/OSS toggle, footer links.
-- P0 **Showcase**: owner-curated public items that anonymous visitors may stream (rate-limited). Everything else still needs a session.
-
 ### Marketing & preview
 - P0 Static landing page plus subpages (`LANDING.md`): L1 landing, L2 docs template (shared hosting, Cloudflare, updating, backups, assistants…), L3 Background play, L4 Self-hosted Spotify alternative, L5 Changelog.
 - P0 **GitHub Pages preview every milestone**: the landing at `/wavehaus/` and the app in **demo mode** at `/wavehaus/app/` (in-browser backend with generated sample music).
@@ -81,8 +71,7 @@
 
 Mobile (Android 412×915): M1 Home · M2 Search · M3 Library · M4 Album · M5 Now Playing · M6 Queue · M7 Upload · M8 Background play (Brave · Android) · M8b (Brave · iPhone, 390×844) · M9 Review import · M10 Bulk edit · M11 Sign in / invite / recovery.
 Desktop (1440×900): D1 Home · D2 Album · D3 Upload & auto-organise · D4 Bulk edit & rename · D5 Settings · Access & members · D6 Settings · AI assistants & security.
-Instance homepage: **L6** desktop `59:701` · **L6m** mobile `60:767` (what `music.tanziro.com/` shows).
-Project site (1440 wide, GitHub Pages): L1 Landing · L2 Docs template · L3 Background play · L4 Self-hosted Spotify alternative · L5 Changelog.
+Landing (1440 wide): L1 Landing · L2 Docs template · L3 Background play · L4 Self-hosted Spotify alternative · L5 Changelog.
 Logo: page 04 · Logo options. Option B "Wave W" is final and lives in `Logo/Mark` and `Logo/Lockup`. Node IDs are in `DESIGN.md`.
 
 Screens not drawn but required (compose from existing components): Artist page, Playlist page (= Album layout), Folder page (= Library list), **Visibility sheet / desktop popover** (spec in `VISIBILITY.md`), **Avatar menu**, Demo-mode banner, Lyrics sheet, Sleep-timer sheet, Settings · General / Library rules / Devices / Storage / Updates (= D5 layout), Setup (= M11 layout + recovery-codes step), Request-access form, Empty states (no music yet → big Upload CTA + "Ask your assistant" tip).

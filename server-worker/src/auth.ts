@@ -1,3 +1,4 @@
+import { APP_BASE } from './deployment';
 import { all,one,run,stmt,settings } from './db';
 import { codes,passwordHash,passwordVerify,randomToken,recoveryHash,sha,timingEqual,ulid } from './crypto';
 import { body,cookie,fail,json,withCookie } from './http';
@@ -71,7 +72,7 @@ export async function authRoutes(request:Request,env:Env,path:string):Promise<Re
  if(path==='/api/auth/sessions/revoke-others'&&method==='POST'){await run(env.DB,'DELETE FROM sessions WHERE user_id=? AND id<>?',auth.user.id,auth.session.id);return json({ok:true});}
  if(path==='/api/auth/pair'&&method==='POST'){
   await rate(env,'pair-create',10,900,auth.user.id);const secret=randomToken(16),expiresAt=Date.now()+300000;
-  for(let attempt=0;attempt<10;attempt++){const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,'0'),hash=await sha(code);const result=await run(env.DB,'INSERT INTO pairing_codes(id,user_id,code_hash,secret_hash,expires_at) SELECT ?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM pairing_codes WHERE code_hash=? AND used_at IS NULL AND expires_at>?)',ulid(),auth.user.id,hash,await sha(secret),expiresAt,hash,Date.now());if(result.meta.changes)return json({code,qrUrl:`${new URL(request.url).origin}/app/pair#${secret}`,expiresAt});}
+  for(let attempt=0;attempt<10;attempt++){const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,'0'),hash=await sha(code);const result=await run(env.DB,'INSERT INTO pairing_codes(id,user_id,code_hash,secret_hash,expires_at) SELECT ?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM pairing_codes WHERE code_hash=? AND used_at IS NULL AND expires_at>?)',ulid(),auth.user.id,hash,await sha(secret),expiresAt,hash,Date.now());if(result.meta.changes)return json({code,qrUrl:`${new URL(request.url).origin}${APP_BASE}pair#${secret}`,expiresAt});}
   fail('busy','Please try creating a code again.',503);
  }
  if((path==='/api/auth/recovery-codes'||path==='/api/auth/password')&&method==='POST'){

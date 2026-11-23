@@ -2,11 +2,11 @@ export type Visibility = 'private'|'public';
 export interface Row { id:string; rev:number; deleted:number }
 export interface Track extends Row {
  owner_id:string; album_id:string; artist_id:string; title:string; artist_name:string; album_artist?:string; album_title:string;
- track_no?:number; disc_no?:number; year?:number; genre?:string; duration_ms:number; codec:string; container:string; mime:string;
- peaks:string|null; storage_key:string; size_bytes:number; sha256:string; quick_hash:string; original_name:string; original_path:string;
- visibility:Visibility; organise_source:string; added_at:number; updated_at:number; lyrics?:string; sample_rate?:number; bitrate?:number;
+ track_no?:number|null; disc_no?:number|null; year?:number|null; genre?:string|null; duration_ms:number; codec:string|null; container:string|null; mime:string;
+ peaks:string|null; storage_key:string; size_bytes:number; sha256:string; quick_hash:string; original_name:string; original_path:string|null;
+ visibility:Visibility; organise_source:string; added_at:number; updated_at:number; lyrics?:string|null; sample_rate?:number|null; bitrate?:number|null;
 }
-export interface Album extends Row { owner_id:string; title:string; artist_id:string; artist_name:string; year?:number; tint:number; art_source:string; visibility:Visibility; sync_visibility:number; folder_path?:string; created_at:number }
+export interface Album extends Row { owner_id:string; title:string; artist_id:string; artist_name:string; year?:number|null; tint:number; art_source:string; art_key?:string|null; visibility:Visibility; sync_visibility:number; folder_path?:string|null; created_at:number }
 export interface Artist extends Row { name:string; sort_name:string; tint:number }
 export interface Playlist extends Row { owner_id:string; name:string; description?:string; visibility:Visibility; sync_visibility:number; created_at:number; updated_at:number }
 export interface PlaylistItem { playlist_id:string; track_id:string; position:number; added_at:number; rev:number; deleted:number }

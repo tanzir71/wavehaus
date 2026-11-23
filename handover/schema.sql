@@ -88,7 +88,6 @@ CREATE TABLE albums (
   tint INTEGER NOT NULL,                        -- hash(albumArtist + album) % 6
   visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private','public')), -- default for tracks added later
   sync_visibility INTEGER NOT NULL DEFAULT 1,   -- 1 = new/moved-in tracks take the album's visibility (VISIBILITY.md)
-  allow_homepage INTEGER NOT NULL DEFAULT 0,    -- member opt-in: the owner/admin may showcase this album on the homepage
   folder_path TEXT,                             -- original relative folder, if any
   created_at INTEGER NOT NULL, rev INTEGER NOT NULL, deleted INTEGER NOT NULL DEFAULT 0
 );
@@ -161,15 +160,3 @@ CREATE TABLE changes (
   created_at INTEGER NOT NULL, undone_at INTEGER
 );
 CREATE INDEX changes_user_time ON changes(user_id, created_at);
-
------------------------------------------------------------------- instance homepage (HOMEPAGE.md)
--- settings key `homepage` (JSON): { enabled, title, eyebrow, intro, owner, allowAnonymousPlay, showOss, githubUrl, links[] }
-CREATE TABLE showcase (
-  item_type TEXT NOT NULL CHECK (item_type IN ('album','playlist','track')),
-  item_id TEXT NOT NULL,
-  position INTEGER NOT NULL,
-  featured INTEGER NOT NULL DEFAULT 0,          -- exactly one row may be featured (hero)
-  added_by TEXT NOT NULL REFERENCES users(id), added_at INTEGER NOT NULL,
-  PRIMARY KEY (item_type, item_id)
-);
-CREATE TABLE showcase_stats (item_type TEXT NOT NULL, item_id TEXT NOT NULL, day TEXT NOT NULL, plays INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (item_type, item_id, day));

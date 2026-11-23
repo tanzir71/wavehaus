@@ -1,4 +1,4 @@
-import { getBlob, idbFile, rangeResponse } from './runtime/media.js';
+import { getBlob, getArt, idbFile, rangeResponse } from './runtime/media.js';
 const version='__BUILD_VERSION__', shell='__SHELL_FILES__';
 const scope=new URL(self.registration.scope).pathname;
 const shellCache=`wh-shell-${scope}-${version}`;
@@ -11,7 +11,7 @@ self.addEventListener('fetch',event=>{
  const relative=url.pathname.startsWith(scope)?url.pathname.slice(scope.length):'';
  if(relative==='share-target'&&req.method==='POST'){event.respondWith((async()=>{const form=await req.formData();const files=form.getAll('audio').filter(f=>f instanceof File);const key=`shared-${crypto.randomUUID()}`;await idbFile(key,files);return Response.redirect(new URL(`upload?shared=${key}`,self.registration.scope),303);})());return;}
  if(relative.startsWith('demo-media/')){event.respondWith((async()=>{if(!await demoSignedIn())return new Response(null,{status:401});const id=relative.slice(11);const blob=await getBlob(`audio-${id}`);return blob?rangeResponse(blob,req):new Response('Media missing',{status:404});})());return;}
- if(relative.startsWith('demo-art/')){event.respondWith((async()=>{if(!await demoSignedIn())return new Response(null,{status:401});const id=relative.slice(9).split('/')[0];const blob=await getBlob(`art-${id}`);return blob?new Response(blob,{headers:{'Content-Type':blob.type||'image/png'}}):new Response(null,{status:404});})());return;}
+ if(relative.startsWith('demo-art/')){event.respondWith((async()=>{if(!await demoSignedIn())return new Response(null,{status:401});const [id,name]=relative.slice(9).split('/');const blob=await getArt(id,name);return blob?new Response(req.method==='HEAD'?null:blob,{headers:{'Content-Type':blob.type||'image/png','Content-Length':String(blob.size),'Cache-Control':'private, max-age=31536000, immutable'}}):new Response(null,{status:404});})());return;}
  if(url.pathname.includes('/api/'))return; // Sessions and API data are never cached.
  if(url.pathname.includes('/media/')){event.respondWith((async()=>{const cached=await (await caches.open('wh-audio-v1')).match(new Request(url.origin+url.pathname));return cached?rangeResponse(await cached.blob(),req,cached.headers.get('Content-Type')||undefined):fetch(req);})());return;}
  if(req.method!=='GET')return;
