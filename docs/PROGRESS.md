@@ -1,5 +1,7 @@
 # Wavehaus implementation
 
+Owner instruction, 24 Nov 2026: finish implementation without further testing. CI now builds release packages and Pages only. Existing test files and historical results are retained; no further automated, browser or physical-device tests are requested.
+
 Source of truth: the unmodified files in `/handover`.
 
 ## Milestones
@@ -9,7 +11,7 @@ Source of truth: the unmodified files in `/handover`.
 - M2 — Shipped: PR #3 merged, tag/release `v0.2.0`, both archives published, CI and Pages green. A real file upload, private album and playback were checked on the deployed preview.
 - Landing correction — Shipped: PR #4, v0.2.1 and Pages verified at 412 and 1920 px. See `landing-fix-verification.md`.
 - M3 — Shipped: PR #5, tag/release `v0.3.0`, PR CI, Pages and release checks green. Queue restoration, generated Media Session artwork and installability were checked on the live preview.
-- M4 — In progress: organiser rules, import review, bulk editing and undo.
+- M4 — Implemented: organiser rules, persistent import review, bulk metadata and rename previews, artwork, album merge/split, track/album privacy and guarded Undo. Publishing v0.4.0.
 - M5–M10 — Pending, in the order defined in `/handover/TASKS.md`.
 
 ## Verification boundaries

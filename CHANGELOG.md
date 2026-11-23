@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.4.0 — M4 · 2026-11-24
+
+Drop a folder. Make it yours.
+
+- Browser organiser rules use tags, folders and filenames, recognise compilations and recordings, number tracks and preserve deliberately separate imports.
+- Persistent import review continues during uploads, with confidence badges, inline album edits, artwork, subset splitting and Undo import.
+- Desktop and mobile selection open a bulk editor with mixed fields, rename-pattern previews, quick fixes, exact album targets and one-image artwork application.
+- Metadata, artwork, album moves, deletion and track/album privacy share guarded change history and 30-day Undo on PHP, Worker and demo.
+- Private transitions remove previously shared items from other members' library sync and cached audio. Generated covers update with the metadata action.
+
+Release packages and Pages are built automatically. Further testing is disabled at the owner's request. Playlist/folder privacy and member controls continue in M7.
+
 ## v0.3.0 — M3 · 2026-11-23
 
 Your music keeps moving.

@@ -1,4 +1,4 @@
-import {journalColumns,JournalConflict,type JournalTable,type JournalWrite,type CountGuard} from '../../shared/journal';
+import {journalColumns,JournalConflict,reversibleOperation,type JournalTable,type JournalWrite,type CountGuard} from '../../shared/journal';
 import {ulid} from './crypto';
 import {stmt} from './db';
 import {fail} from './http';
@@ -65,7 +65,7 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
    }
   }
  }
- for(const group of chunks(plan.ops.map((op,index)=>({...op,index})))){
+ for(const group of chunks(plan.ops.map((op,index)=>({...op,index})).filter(reversibleOperation))){
   const payload=JSON.stringify(group.map(op=>({table:op.table,id:op.id,index:op.index,before:op.before,after:op.after})));
   if(new TextEncoder().encode(payload).byteLength>1500000)fail('too_large','This edit is too large. Choose fewer rows.',413);
   const rev=revision("json_extract(j.value,'$.index')");

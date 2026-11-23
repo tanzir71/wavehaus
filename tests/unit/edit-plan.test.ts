@@ -42,6 +42,12 @@ describe('bulk metadata decisions',()=>{
  it('keeps a deliberately separate album separate for unrelated edits',async()=>{
   const f=fixture();f.album.merge_key='salted-import-key';f.albums.push({...f.album,id:id(8000),rev:20,merge_key:key('Artist','Album')});const plan=await metadataPlan(editInput({ids:[f.tracks[0].id],set:{genre:'Ambient'}}),f.repo,f.context);expect(plan.preview[0].after.album_id).toBe(f.album.id);expect(plan.write.ops.filter(op=>op.table==='albums')).toEqual([]);
  });
+ it('keeps a separate import away from matching albums outside the selection',async()=>{
+  const f=fixture();f.albums.push({...f.album,id:id(8000),title:'Target',identity_key:key('Artist','Target'),merge_key:key('Artist','Target'),visibility:'public'});const plan=await metadataPlan(editInput({ids:f.tracks.map(row=>row.id),set:{album:'Target'},mergeExisting:false}),f.repo,f.context);expect(plan.published).toBe(0);expect(plan.preview.every(row=>row.after.album_id===f.album.id)).toBe(true);expect(plan.write.ops.find(op=>op.id===f.album.id)!.after.merge_key).not.toBe(key('Artist','Target'));
+ });
+ it('reconciles a separate import into an already organised album inside that selection',async()=>{
+  const f=fixture(2),target={...f.album,id:id(8000),title:'Target',identity_key:key('Artist','Target'),merge_key:'salted-target'};f.albums.push(target);f.tracks[1].album_id=target.id;f.tracks[1].album_title='Target';const plan=await metadataPlan(editInput({ids:f.tracks.map(row=>row.id),set:{genre:'Ambient'},perId:{[f.tracks[0].id]:{album:'Target'}},mergeExisting:false}),f.repo,f.context);expect(plan.preview.every(row=>row.after.album_id===target.id)).toBe(true);expect(plan.write.ops.filter(op=>op.table==='albums'&&!op.before)).toEqual([]);
+ });
  it('allows an album display-name case fix without changing the global artist',async()=>{
   const f=fixture();const plan=await metadataPlan(editInput({ids:f.tracks.map(row=>row.id),set:{albumArtist:'ARTIST'}}),f.repo,f.context);expect(plan.write.ops.find(op=>op.table==='albums')!.after.artist_name).toBe('ARTIST');expect(plan.write.ops.some(op=>op.table==='artists')).toBe(false);
  });

@@ -25,6 +25,8 @@ export async function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise
  if(!demoSignedIn(s))fail('unauthenticated','Sign in to continue.',401);
  if(path.startsWith('/api/changes')){const {demoJournal}=await import('./journal');const result=await demoJournal(request,path);if(result)return result;}
  if(path==='/api/tracks'&&['PATCH','DELETE'].includes(method)){const{demoEdits}=await import('./edits');return (await demoEdits(request,path))!;}
+ if(path.startsWith('/api/albums/')&&(method==='PATCH'||path==='/api/albums/merge'&&method==='POST')){const{demoEdits}=await import('./edits');const result=await demoEdits(request,path);if(result)return result;}
+ if(path==='/api/visibility'){const{demoVisibility}=await import('./visibility');const result=await demoVisibility(request,path);if(result)return result;}
  const artwork=path.match(/^\/(?:art|demo-art)\/([0-9A-HJKMNP-TV-Z]{26})\/(96\.webp|600\.webp|generated-512\.png)$/);if(artwork&&['GET','HEAD'].includes(method)){const album=s.albums.find(a=>a.id===artwork[1]&&!a.deleted);if(!album)fail('not_found','Album not found.',404);if(album.owner_id!==s.user.id&&album.visibility!=='public')fail('forbidden','This album is private.',403);const blob=await getArt(artwork[1],artwork[2],album.art_key??null);return blob?new Response(method==='HEAD'?null:blob,{headers:{'Content-Type':blob.type,'Content-Length':String(blob.size),'Cache-Control':'private, max-age=31536000, immutable'}}):response({error:{code:'not_found',message:'Artwork has not arrived yet.'}},404);}
  if(path==='/api/library'){
   const since=Number(url.searchParams.get('since')||0);if(!Number.isSafeInteger(since)||since<0)fail('invalid_cursor','Invalid library cursor.');

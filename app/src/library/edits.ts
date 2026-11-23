@@ -19,7 +19,7 @@ export async function regenerateCovers(result:EditResult,owner=user.value?.id){
 }
 export async function editTracks(body:Record<string,unknown>,method='PATCH'){
  const owner=user.value?.id;if(!owner)throw new Error('Sign in to edit your music.');const finish=beginBusy();
- try{const result=await api.request<EditResult>('/api/tracks',json(body,method));sameAccount(owner);let coverWarning='';try{await regenerateCovers(result,owner);}catch{coverWarning=' Cover update needs a retry.';}await sync();sameAccount(owner);offerUndo(`${result.updated} tracks ${method==='DELETE'?'deleted':'updated'}.${coverWarning}`,result.changeId);return result;}finally{finish();}
+ try{const result=await api.request<EditResult>('/api/tracks',json(body,method));sameAccount(owner);let coverWarning='';try{await regenerateCovers(result,owner);}catch{coverWarning=' Cover update needs a retry.';}await sync();sameAccount(owner);if(method==='PATCH')await import('../upload/imports').then(module=>module.rememberImportFields(body));offerUndo(`${result.updated} tracks ${method==='DELETE'?'deleted':'updated'}.${coverWarning}`,result.changeId);return result;}finally{finish();}
 }
 export async function undoChange(changeId:string){const owner=user.value?.id,finish=beginBusy();try{await api.request(`/api/changes/${changeId}/undo`,json({}));if(owner)sameAccount(owner);await sync();toast('Change undone.');}finally{finish();}}
 export async function applyArtwork(albumIds:string[],picture:Blob,changeId?:string){

@@ -1,6 +1,7 @@
 import {metadataPlan,metadataTrackColumns,type MetadataRepository,type AlbumIdentity} from '../../shared/edit-plan';
 import {editInput} from '../../shared/edit-input';
 import {deleteInput,deletePlan} from '../../shared/delete-plan';
+import {albumMutation} from '../../shared/album-input';
 import {journalColumns,type JournalRow} from '../../shared/journal';
 import {normalized} from '../../shared/upload-input';
 import {all} from './db';
@@ -28,9 +29,9 @@ export function metadataRepository(env:Env):MetadataRepository{
  };
 }
 export async function metadataRoutes(request:Request,env:Env,auth:Auth,path:string):Promise<Response|null>{
- if(path!=='/api/tracks'||!['PATCH','DELETE'].includes(request.method))return null;
+ const album=path.match(/^\/api\/albums\/([0-9A-HJKMNP-TV-Z]{26})$/),merging=path==='/api/albums/merge'&&request.method==='POST';if(!(path==='/api/tracks'&&['PATCH','DELETE'].includes(request.method))&&!(album&&request.method==='PATCH')&&!merging)return null;
  if(request.method==='DELETE'){const plan=await deletePlan(deleteInput(await body(request)),metadataRepository(env),{userId:auth.user.id,role:auth.user.role,id:ulid,hash:sha});return json({...await writeJournal(env,auth,plan.write),updated:plan.updated,generatedAlbumIds:plan.generatedAlbumIds});}
- const input=editInput(await body(request)),plan=await metadataPlan(input,metadataRepository(env),{userId:auth.user.id,role:auth.user.role,id:ulid,hash:sha});
+ const repository=metadataRepository(env),raw=await body(request),mutation=album||merging?await albumMutation(raw,album?.[1],{albums:repository.albums,albumTracks:ids=>all<JournalRow>(env.DB,'SELECT id,album_id FROM tracks WHERE deleted=0 AND album_id IN(SELECT value FROM json_each(?)) LIMIT 2001',JSON.stringify(ids))}):null,input=editInput(mutation?.raw||raw),plan=await metadataPlan(input,repository,{userId:auth.user.id,role:auth.user.role,id:ulid,hash:sha});if(mutation){plan.write.counts=[...plan.write.counts||[],...mutation.counts];if(mutation.summary)plan.write.summary=mutation.summary;}
  const impact={updated:plan.updated,albumsUpdated:plan.albumsUpdated,published:plan.published,madePrivate:plan.madePrivate};
  if(input.dryRun){if(encoder.encode(JSON.stringify(plan.preview)).byteLength>8*1024**2)fail('too_large','Preview fewer tracks at once.',413);return json({dryRun:true,changeId:null,...impact,preview:plan.preview,albumRevs:plan.albumRevs});}
  const result=await writeJournal(env,auth,plan.write);return json({...result,...impact,albumIds:plan.albumIds,generatedAlbumIds:plan.generatedAlbumIds});

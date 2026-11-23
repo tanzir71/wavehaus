@@ -1,4 +1,4 @@
-import {journalColumns,JournalConflict,compactLegacyOp,undoPlan,type JournalRow,type JournalOp,type JournalChange,type JournalTable,type JournalWrite} from '../../../shared/journal';
+import {journalColumns,JournalConflict,compactLegacyOp,undoPlan,reversibleOperation,type JournalRow,type JournalOp,type JournalChange,type JournalTable,type JournalWrite} from '../../../shared/journal';
 import {rowIds} from '../../../shared/edit-input';
 import {ApiError} from '../api/types';
 import {id} from '../library/ids';
@@ -34,7 +34,7 @@ export function demoWriteJournal(state:DemoState,plan:JournalWrite){
   if(op.before){const row=rows(state,table).find(row=>row.id===op.id)!,becamePrivate=table!=='artists'&&row.visibility==='public'&&patch.visibility==='private';Object.assign(row,patch,{rev:revision},table==='tracks'?{updated_at:now}:{},becamePrivate?{hidden_rev:revision}:{});}
   else rows(state,table).push({...(table==='albums'?{art_source:'generated',art_key:null,visibility:'private',sync_visibility:1,year:null,folder_path:null}:{}),deleted:0,...patch,id:op.id,rev:revision});
  }
- entry.journalOps||=[];entry.journalOps.push(...plan.ops.map((op,index)=>({...op,before:op.before?{...op.before}:null,after:{...op.after,rev:base+index+1}})));
+ entry.journalOps||=[];entry.journalOps.push(...plan.ops.flatMap((op,index)=>reversibleOperation(op)?[{...op,before:op.before?{...op.before}:null,after:{...op.after,rev:base+index+1}}]:[]));
  if(!parent)changes.unshift(entry);for(const changeId of plan.undoIds||[])changes.find(change=>change.id===changeId)!.undone_at=now;
  return {changeId,updated:plan.ops.filter(op=>op.table==='tracks').length};
 }

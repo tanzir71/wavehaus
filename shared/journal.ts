@@ -1,5 +1,6 @@
 import {UploadError} from './upload-input';
 export type JournalTable='tracks'|'albums'|'artists';
+export const reversibleOperation=(op:JournalOp)=>op.table!=='artists'||!op.before||Object.keys(op.after).some(key=>key!=='id'&&key!=='rev');
 export type JournalRow=Record<string,unknown>&{id:string;rev:number};
 export interface JournalOp {table:JournalTable;id:string;before:JournalRow|null;after:JournalRow}
 export interface JournalChange {id:string;created_at:number;undone_at:number|null;undoable?:number;ops:JournalOp[]}

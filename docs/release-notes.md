@@ -1,17 +1,15 @@
-Wavehaus M3 hardens playback and connects the core player screens to one persistent audio engine.
+Wavehaus M4 adds automatic organisation, import review and bulk editing.
 
 Preview: https://tanzir71.github.io/wavehaus/
 App: https://tanzir71.github.io/wavehaus/app/
 
 What to try:
-1. Start an album, add two tracks, reorder them in Queue and reload. Resume at the saved position.
-2. Scrub the waveform or use arrow keys, toggle shuffle/repeat, and choose an end-of-track sleep timer.
-3. On Android Brave with Background play enabled, lock the phone and check track advance and lock-screen artwork/controls.
+1. Choose a music folder and open Review import while uploads continue.
+2. Select tracks, preview a filename pattern or quick fix, then apply the batch.
+3. Change artwork, split or merge an album, and use Undo from the toast or Activity.
 
-The engine resolves the next source before ended, calls play synchronously, handles external pauses and retries network failures with bounded backoff. Local persistence keeps the full queue; a bounded cloud window preserves its sections and context. Listening events retry idempotently. Sleep offers 5/15/30/45/60 minutes or end of track, with a final fade on desktop/Android.
+Rules cover tags, folders, filename patterns, compilations, recordings and missing track numbers. Imports remember their rule settings and action history across reloads. Turning off existing-album merging preserves separate imports. Review offers inline album fields and bulk editing for completed tracks; closing it accepts guesses without stopping uploads.
 
-Now Playing and Queue follow the approved design, using generated/user covers in the actual app. Canvas waveforms support keyboard and pointer seeking, proportional album segments and saved moment markers. The mobile mini player uses the Mini geometry; desktop keeps its single-row player. The v0.2.1 landing mockup/footer corrections are retained.
+The editor supports mixed fields, parsing and formatting token patterns, quick fixes, one-image artwork application, exact album destinations and deletion. Metadata and generated-cover changes share one Undo action. Track and album privacy applies across all three backends, with opaque hidden sync IDs and cached-audio removal. Public changes show their impact before confirmation.
 
-PHP's authenticated range streamer remains the default. Optional X-Sendfile and protected LiteSpeed-context handoffs are configured in the private data directory; details ship in MEDIA-OFFLOAD.md in the PHP archive. No client dependency was added. Local validation includes 50 unit checks, 12 offload path/header checks, the API suite on all three adapters, server browser flows, paused restore, queue ordering, and twenty distinct original tracks with all nineteen measured browser transitions below 300 ms on one audio element. Home, Now Playing and Queue accessibility measured 100. See docs/m3-decisions.md and docs/m3-verification.md for evidence and limits.
-
-Physical Android screen-lock playback and a real LiteSpeed context remain unverified. Viewport emulation does not establish those results. M3 autoplay uses an initial local selection; the full M6 radio-ranking worker comes later. A–B and moment editing remain M9. This is a milestone preview, not the final 1.0 release.
+PHP and Worker archives are attached. Schema migrations 0005 and 0006 preserve released data and legacy change history. The landing footer and approved mockup corrections remain included. Builds and publication continue automatically; further tests are disabled at the owner's request. Remaining milestones add the background-play guide, search/recommendations, playlist/member controls, assistant tokens/MCP and offline/lyrics/moments.

@@ -1,6 +1,6 @@
 # M4 verification in progress
 
-M4 is being implemented on `milestone/m4`. It has not been released.
+M4 is implemented on `milestone/m4` for v0.4.0. At the owner's request on 24 Nov 2026, subsequent work runs packaging/Pages builds only. The results below are historical checks from before that instruction, rather than claims of final test coverage.
 
 Verified so far:
 
@@ -12,6 +12,6 @@ Verified so far:
 - Browser demo: 500 tracks renamed through the bulk editor with one metadata request and one journal; the toast's Undo restores all 500 titles. Desktop 1440×900 and mobile 412×915 render without horizontal overflow.
 - Production build: 56.6 KiB initial JavaScript gzip, below the 90 KiB budget. Editor and artwork helpers are lazy chunks.
 
-Still required before release: complete import review and persistent batch Undo; finish the remaining bulk actions and privacy controls; verify the completed UI against the Figma frames; run the final milestone checks, package verification and deployment.
+Final implementation adds persistent import review and batch Undo, compilation reconciliation, separate-import preservation, exact album merge targets, subset splitting, track/album privacy and shared artwork actions. Production release packaging and Pages builds produce the deliverables. No further tests are run.
 
 Physical Android Brave/Chrome/iOS screen-lock and OS share-target checks remain device checks. Browser emulation does not establish those outcomes.
