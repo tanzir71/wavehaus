@@ -7,7 +7,7 @@ export async function playbackRoutes(request:Request,env:Env,auth:Auth,path:stri
  const uid=auth.user.id,method=request.method;
  if(path==='/api/player-state'){
   if(method==='GET'){const row=await one<{state:string}>(env.DB,'SELECT state FROM player_state WHERE user_id=?',uid);return json(row?JSON.parse(row.state):null);}
-  if(method==='PUT'){const value=playerInput(await body(request));await stmt(env.DB,'INSERT INTO player_state(user_id,state,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state,updated_at=excluded.updated_at',uid,JSON.stringify(value),Date.now()).run();return json(value);}
+  if(method==='PUT'){const value=playerInput(await body(request));await stmt(env.DB,"INSERT INTO player_state(user_id,state,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state,updated_at=excluded.updated_at WHERE COALESCE(json_extract(player_state.state,'$.updatedAt'),0)<=?",uid,JSON.stringify(value),Date.now(),value.updatedAt).run();return json(JSON.parse((await one<{state:string}>(env.DB,'SELECT state FROM player_state WHERE user_id=?',uid))!.state));}
  }
  if(path!=='/api/plays')return null;
  if(method==='POST'){

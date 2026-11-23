@@ -1,37 +1,61 @@
-import { signal } from '@preact/signals';
-import { get,set } from 'idb-keyval';
+import { batch, signal } from '@preact/signals';
 import { api } from '@backend';
-import { json,type Track } from '../api/types';
-// No UI imports. This element survives every route and component change.
-export const audio=document.createElement('audio');audio.preload='auto';audio.setAttribute('playsinline','');audio.id='wavehaus-audio';audio.hidden=true;document.body.append(audio);
-export const state=signal<'paused'|'playing'|'loading'|'error'>('paused'),current=signal<Track|null>(null),positionMs=signal(0),bufferedMs=signal(0),queue=signal<Track[]>([]),queueIndex=signal(0),repeat=signal<'off'|'all'|'one'>('off'),shuffle=signal(false),autoplay=signal(true),engineError=signal('');
-let pendingSeek=0,retry=0,recoveryTimer:ReturnType<typeof setTimeout>,sleepTimer:ReturnType<typeof setTimeout>|undefined,lastPosition=0;
-let playerKey=`wh-player-${api.demo?'demo':'http'}:anonymous`;
-export function configureUser(id:string){playerKey=`wh-player-${api.demo?'demo':'http'}:${id}`;}
-export function clearPlayer(){clearTimeout(recoveryTimer);clearTimeout(sleepTimer);audio.removeEventListener('ended',pause);audio.pause();audio.removeAttribute('src');audio.load();current.value=null;queue.value=[];queueIndex.value=0;positionMs.value=0;state.value='paused';engineError.value='';if('mediaSession'in navigator){navigator.mediaSession.metadata=null;navigator.mediaSession.playbackState='none';try{navigator.mediaSession.setPositionState();}catch{}}}
-const catchPlay=(p:Promise<void>)=>{p.catch(e=>{state.value='paused';engineError.value=e.name==='NotAllowedError'?'Tap Play to start listening.':'Playback could not start. Try again.';});};
-function positionState(){if(!('mediaSession'in navigator)||!audio.duration||!Number.isFinite(audio.duration))return;try{navigator.mediaSession.setPositionState({duration:audio.duration,playbackRate:audio.playbackRate,position:Math.min(audio.duration,Math.max(0,audio.currentTime))});}catch{/* Browser does not support position state. */}}
-function metadata(t:Track){if(!('mediaSession'in navigator))return;const album={id:t.album_id,rev:t.rev,art_source:'generated'};navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist_name,album:t.album_title,artwork:[{src:new URL(api.artUrl(album as never,600),location.href).href,sizes:'512x512',type:'image/png'}]});}
-function load(t:Track,at=0,playNow=true){current.value=t;pendingSeek=at/1000;positionMs.value=at;retry=0;engineError.value='';state.value=playNow?'loading':'paused';audio.src=t.id==='background-test'?`${import.meta.env.BASE_URL}chime-test.wav`:api.mediaUrl(t);metadata(t);if(playNow)catchPlay(audio.play());else audio.load();persist();}
-export function play(tracks:Track[]|Track,at=0){if('audioSession'in navigator)(navigator as Navigator&{audioSession:{type:string}}).audioSession.type='playback';if(Array.isArray(tracks)){if(!tracks.length)return;queue.value=tracks;queueIndex.value=0;load(tracks[0],at);}else{const index=queue.value.findIndex(t=>t.id===tracks.id);if(index>=0)queueIndex.value=index;else{queue.value=[tracks];queueIndex.value=0;}load(tracks,at);}}
-export function resume(){if(!current.value)return;catchPlay(audio.play());}
-export function pause(){audio.pause();persist();}
-export const toggle=()=>state.value==='playing'?pause():resume();
-export function seek(ms:number){if(!current.value)return;const next=Math.min(current.value.duration_ms,Math.max(0,ms));positionMs.value=next;if(audio.readyState>=1)audio.currentTime=next/1000;else pendingSeek=next/1000;positionState();}
-export function next(manual=true){if(!queue.value.length)return;if(!manual&&repeat.value==='one'){seek(0);catchPlay(audio.play());return;}const index=queueIndex.value+1;if(index>=queue.value.length){if(repeat.value==='all'){queueIndex.value=0;load(queue.value[0]);}else pause();return;}queueIndex.value=index;load(queue.value[index]);}
-export function prev(){if(audio.currentTime>3){seek(0);return;}queueIndex.value=Math.max(0,queueIndex.value-1);const t=queue.value[queueIndex.value];if(t)load(t);}
-export function enqueue(t:Track){const q=[...queue.value];q.splice(queueIndex.value+1,0,t);queue.value=q;persist();}
-export function sleep(minutes:number|'endOfTrack'|null){clearTimeout(sleepTimer);if(minutes==='endOfTrack'){audio.addEventListener('ended',pause,{once:true});}else if(minutes)sleepTimer=setTimeout(pause,minutes*60000);}
-export function setVolume(value:number){audio.volume=Math.min(1,Math.max(0,value));}
-function snapshot(){return {queue:queue.value.map(t=>t.id),index:queueIndex.value,positionMs:positionMs.value,shuffle:shuffle.value,repeat:repeat.value,autoplay:autoplay.value,updatedAt:Date.now()};}
-function persist(){if(!current.value)return;set(playerKey,snapshot()).catch(()=>{});api.request('/api/player-state',json(snapshot(),'PUT')).catch(()=>{});}
-export async function restore(tracks:Track[]){const saved=await get<ReturnType<typeof snapshot>>(playerKey)||await api.request<ReturnType<typeof snapshot>|null>('/api/player-state');if(!saved)return;queue.value=saved.queue.map(id=>tracks.find(t=>t.id===id)).filter((t):t is Track=>!!t);queueIndex.value=Math.min(saved.index,Math.max(0,queue.value.length-1));repeat.value=saved.repeat;shuffle.value=saved.shuffle;autoplay.value=saved.autoplay;const t=queue.value[queueIndex.value];if(t)load(t,saved.positionMs,false);}
-audio.addEventListener('ended',()=>{next(false);}); // Synchronous src + play, no metadata fetch or await.
-audio.addEventListener('loadedmetadata',()=>{if(pendingSeek){audio.currentTime=pendingSeek;pendingSeek=0;}positionState();});
-audio.addEventListener('timeupdate',()=>{positionMs.value=audio.currentTime*1000;bufferedMs.value=audio.buffered.length?audio.buffered.end(audio.buffered.length-1)*1000:0;if(Date.now()-lastPosition>5000){lastPosition=Date.now();positionState();if(current.value)set(playerKey,snapshot()).catch(()=>{});}});
-for(const event of ['play','pause','seeked','ratechange'] as const)audio.addEventListener(event,()=>{if(event==='play'){state.value='playing';engineError.value='';}if(event==='pause')state.value='paused';if('mediaSession'in navigator)navigator.mediaSession.playbackState=audio.paused?'paused':'playing';positionState();});
-function recover(){if(retry>=4){state.value='error';engineError.value='Playback stopped. Check your connection, then tap Play.';return;}const at=audio.currentTime;recoveryTimer=setTimeout(()=>{audio.src=audio.src;pendingSeek=at;catchPlay(audio.play());},1000*2**retry++);}
-audio.addEventListener('error',()=>{if(audio.error?.code===2)recover();else{state.value='error';engineError.value='This file cannot play on this device.';}});
-audio.addEventListener('stalled',()=>{clearTimeout(recoveryTimer);recoveryTimer=setTimeout(recover,8000);});audio.addEventListener('playing',()=>{clearTimeout(recoveryTimer);retry=0;});
-addEventListener('online',()=>{if(state.value==='error')recover();});addEventListener('pagehide',persist);
-if('mediaSession'in navigator){const handlers:Partial<Record<MediaSessionAction,MediaSessionActionHandler>>={play:resume,pause,stop:()=>{pause();seek(0);},previoustrack:prev,nexttrack:()=>next(),seekto:d=>seek((d.seekTime||0)*1000),seekbackward:d=>seek(positionMs.value-(d.seekOffset||10)*1000),seekforward:d=>seek(positionMs.value+(d.seekOffset||10)*1000)};for(const [action,handler]of Object.entries(handlers))try{navigator.mediaSession.setActionHandler(action as MediaSessionAction,handler!);}catch{/* Older browser. */}}
+import type { Album, Track } from '../api/types';
+import { id } from '../library/ids';
+import { AudioEngine, type PlaybackState } from './controller';
+import { PlaybackPersistence } from './persistence';
+import { PlaybackListening } from './listening';
+import { NativeMediaSession } from './media-session';
+import { platform } from './brave';
+import type { QueueEntry, RepeatMode } from './queue';
+
+// One persistent playback element. Route changes and HMR never replace it.
+export const audio = (document.getElementById('wavehaus-audio') as HTMLAudioElement | null) || document.createElement('audio');
+audio.id='wavehaus-audio';audio.hidden=true;audio.preload='none';audio.setAttribute('playsinline','');if(!audio.isConnected)document.body.append(audio);
+export const state=signal<PlaybackState>('paused'),current=signal<Track|null>(null),positionMs=signal(0),durationMs=signal(0),bufferedMs=signal(0),queue=signal<Track[]>([]),queueIndex=signal(0),repeat=signal<RepeatMode>('off'),shuffle=signal(false),autoplay=signal(true),engineError=signal(''),interrupted=signal(false),volume=signal(1),unsupportedTracks=signal(new Set<string>()),sleepState=signal<{until:number|null;track:string|null}>({until:null,track:null});
+export const queueSections=signal<{current:QueueEntry|null;manual:QueueEntry[];context:QueueEntry[];automatic:QueueEntry[];label:string;type:string}>({current:null,manual:[],context:[],automatic:[],label:'Your library',type:'library'});
+const media=new NativeMediaSession(api,import.meta.env.BASE_URL);
+const persistence=new PlaybackPersistence(api,import.meta.env.BASE_URL,()=>{engineError.value='Playback is working, but this browser could not save your position.';});
+const listening=new PlaybackListening(api,import.meta.env.BASE_URL);
+let queueRevision=-1,warmUrl:string|null=null,warmRequest:AbortController|null=null;
+function warm(url:string|null){
+ if(url===warmUrl)return;warmRequest?.abort();warmRequest=null;warmUrl=null;
+ const connection=(navigator as Navigator&{connection?:{saveData?:boolean}}).connection;
+ if(!url||!navigator.onLine||connection?.saveData)return;
+ warmUrl=url;const controller=new AbortController();warmRequest=controller;
+ void fetch(url,{headers:{Range:'bytes=0-65535'},credentials:'same-origin',cache:'no-store',signal:controller.signal}).then(async response=>{if(response.status===206)await response.arrayBuffer();else await response.body?.cancel();}).catch(()=>{}).finally(()=>{if(warmRequest===controller)warmRequest=null;});
+}
+function resolvedUrl(track:Track){const url=new URL(track.id==='background-test'?`${import.meta.env.BASE_URL}chime-test.wav`:api.mediaUrl(track),location.href);if(url.origin!==location.origin)throw new Error('Playback requires a same-origin media URL.');return url.href;}
+const engine=new AudioEngine({audio,media,persistence,listening,url:resolvedUrl,id,warm,ios:platform()==='ios',deviceLabel:platform()==='android'?'Android':platform()==='ios'?'iPhone / iPad':'Desktop',changed:publish});
+function publish(){batch(()=>{
+ state.value=engine.state;current.value=engine.current;positionMs.value=engine.positionMs;durationMs.value=engine.durationMs;bufferedMs.value=engine.bufferedMs;engineError.value=engine.error;interrupted.value=engine.interrupted;volume.value=engine.volume;
+ const sleep=sleepState.peek();if(sleep.until!==engine.sleepUntil||sleep.track!==engine.sleepTrack)sleepState.value={until:engine.sleepUntil,track:engine.sleepTrack};
+ if(queueRevision!==engine.queueRevision){queueRevision=engine.queueRevision;const q=engine.queue,timeline=q.timeline;queue.value=timeline.map(e=>e.track);queueIndex.value=Math.max(0,timeline.findIndex(e=>e.key===q.current?.key));repeat.value=q.repeat;shuffle.value=q.shuffle;autoplay.value=q.autoplay;unsupportedTracks.value=new Set(engine.unsupported);queueSections.value={current:q.current,manual:[...q.manual],context:[...q.remaining],automatic:[...q.automatic],label:q.contextLabel,type:q.contextType};}
+});}
+export function configureUser(userId:string){engine.configure(userId);}
+export function clearPlayer(){engine.configure(null);}
+export function updateLibrary(tracks:Track[],albums:Album[]){media.setAlbums(albums);engine.setCatalog(tracks);}
+export async function restore(tracks:Track[]){engine.setCatalog(tracks);await engine.restore();}
+export function load(tracks:Track[],index=0,context={label:tracks[0]?.album_title||'Your library',type:'library'},at=0){engine.start(tracks,index,context.label,context.type,at);}
+export function play(tracks?:Track[]|Track,at=0){if(!tracks){engine.resume();return;}if(Array.isArray(tracks))load(tracks,0,{label:tracks[0]?.album_title||'Your library',type:'library'},at);else if(tracks.id===current.peek()?.id){if(at)engine.seek(at);engine.resume();}else engine.start([tracks],0,tracks.album_title||'Your library',tracks.id==='background-test'?'test':'library',at);}
+export const resume=()=>engine.resume();
+export const pause=()=>engine.pause();
+export const stop=()=>engine.stop();
+export const toggle=()=>state.peek()==='playing'||state.peek()==='loading'?pause():resume();
+export const seek=(ms:number,fast=false)=>engine.seek(ms,fast);
+export const next=(manual=true)=>engine.next(manual?'manual':'ended');
+export const prev=()=>engine.previous();
+export const enqueue=(tracks:Track|Track[])=>engine.enqueue(Array.isArray(tracks)?tracks:[tracks]);
+export const jump=(key:string)=>engine.jump(key);
+export const removeQueued=(key:string)=>engine.remove(key);
+export const reorderQueued=(key:string,to:number)=>engine.reorder(key,to);
+export const clearQueue=()=>engine.clearManual();
+export const setShuffle=(value:boolean)=>engine.setShuffle(value);
+export const setRepeat=(value:RepeatMode)=>engine.setRepeat(value);
+export const setAutoplay=(value:boolean)=>engine.setAutoplay(value);
+export const setLoop=(aMs:number,bMs:number|null)=>engine.setLoop(aMs,bMs);
+export const sleep=(minutes:number|'endOfTrack'|null)=>engine.sleep(minutes);
+export const setVolume=(value:number)=>engine.setVolume(value);
+const removeHandlers=media.handlers({play:resume,pause,stop,previoustrack:prev,nexttrack:()=>next(),seekto:d=>{if(d.seekTime!==undefined)seek(d.seekTime*1000,!!d.fastSeek);},seekbackward:d=>seek(positionMs.peek()-(d.seekOffset||10)*1000),seekforward:d=>seek(positionMs.peek()+(d.seekOffset||10)*1000)});
+const online=()=>engine.online(),pagehide=()=>engine.pagehide();addEventListener('online',online);addEventListener('pagehide',pagehide);
+if(import.meta.hot)import.meta.hot.dispose(()=>{removeHandlers();removeEventListener('online',online);removeEventListener('pagehide',pagehide);engine.dispose();});

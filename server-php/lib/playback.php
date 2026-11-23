@@ -30,7 +30,7 @@ function playback_routes(PDO $db,array $auth,string $path,string $method): bool 
     $uid=$auth['user']['id'];
     if($path==='/api/player-state'){
         if($method==='GET'){$row=query_one($db,'SELECT state FROM player_state WHERE user_id=?',[$uid]);reply($row?json_decode($row['state'],true):null);}
-        if($method==='PUT'){$value=player_input(body());execute($db,'INSERT INTO player_state(user_id,state,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state,updated_at=excluded.updated_at',[$uid,json_encode($value,JSON_THROW_ON_ERROR),now_ms()]);reply($value);}
+        if($method==='PUT'){$value=player_input(body());$saved=transaction($db,function()use($db,$uid,$value){$previous=query_one($db,'SELECT state FROM player_state WHERE user_id=?',[$uid]);$old=$previous?json_decode($previous['state'],true):null;if(($old['updatedAt']??0)>$value['updatedAt'])return $old;execute($db,'INSERT INTO player_state(user_id,state,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state,updated_at=excluded.updated_at',[$uid,json_encode($value,JSON_THROW_ON_ERROR),now_ms()]);return $value;});reply($saved);}
     }
     if($path!=='/api/plays')return false;
     if($method==='POST'){

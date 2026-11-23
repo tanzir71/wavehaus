@@ -9,7 +9,7 @@ export async function demoPlayback(request:Request,path:string){
  const method=request.method;
  if(path==='/api/player-state'){
   if(method==='GET')return json((await readState())!.playerState);
-  if(method==='PUT'){const value=playerInput(await request.json());await mutate(s=>{if(!demoSignedIn(s))throw new ApiError('unauthenticated','Sign in to continue.',401);s.playerState=value;});return json(value);}
+  if(method==='PUT'){const value=playerInput(await request.json()),saved=await mutate(s=>{if(!demoSignedIn(s))throw new ApiError('unauthenticated','Sign in to continue.',401);if(((s.playerState as {updatedAt?:number}|null)?.updatedAt||0)>value.updatedAt)return s.playerState;s.playerState=value;return value;});return json(saved);}
  }
  if(path!=='/api/plays')return null;
  if(method==='POST'){
