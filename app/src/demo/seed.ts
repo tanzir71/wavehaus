@@ -11,7 +11,10 @@ export async function seed(){
   const album={id:albumId,owner_id:state.user.id,title:record.title,artist_id:artistId,artist_name:record.artist,year:2026,tint:tint(record.artist,record.title),art_source:'generated',visibility:'private' as const,sync_visibility:1,folder_path:`${record.artist}/${record.title}`,created_at:now-a*3600000,rev:++state.rev,deleted:0};state.albums.push(album);
   for(const [n,title] of record.tracks.entries()){
    const trackId=id(),seconds=32+n*3;const {blob,peaks}=await generateMusic(a*4+n,seconds);await putBlob(`audio-${trackId}`,blob);
+   const digest=async(b:Blob)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await b.arrayBuffer())),x=>x.toString(16).padStart(2,'0')).join('');
+   const sha256=await digest(blob),quickHash=await digest(new Blob([blob.slice(0,1024**2),blob.slice(Math.max(0,blob.size-1024**2)),new TextEncoder().encode(String(blob.size))]));
    state.tracks.push({id:trackId,owner_id:state.user.id,album_id:albumId,artist_id:artistId,title,artist_name:record.artist,album_artist:record.artist,album_title:record.title,track_no:n+1,disc_no:1,year:2026,genre:record.genre,duration_ms:seconds*1000,codec:'PCM',container:'WAV',mime:'audio/wav',sample_rate:16000,bitrate:256000,peaks,storage_key:`audio-${trackId}`,size_bytes:blob.size,sha256:`generated-${trackId}`,quick_hash:`generated-${trackId}`,original_name:`${String(n+1).padStart(2,'0')} - ${title}.wav`,original_path:`${record.artist}/${record.title}/${title}.wav`,visibility:'private',organise_source:'tags',added_at:now-a*3600000,updated_at:now,rev:++state.rev,deleted:0});
+   state.tracks.at(-1)!.sha256=sha256;state.tracks.at(-1)!.quick_hash=quickHash;
    state.user.used_bytes+=blob.size;
   }
   await putBlob(`art-${albumId}`,await coverPng(record.title,record.artist,state.tracks.at(-1)!.peaks));
