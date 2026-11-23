@@ -43,7 +43,8 @@ Contract tests in `/tests/api` assert every endpoint below against `BASE_URL`.
 | POST | `/api/albums/merge` | `{ intoId, fromIds }` |
 | CRUD | `/api/playlists`, `/api/playlists/:id/items` | add `{ trackIds, afterPosition? }`, reorder `{ trackId, position }` |
 | PUT/DELETE | `/api/likes/:trackId` | |
-| POST | `/api/plays` | batch `{ plays:[{ trackId, startedAt, msPlayed, completed, skipped, context, deviceLabel }] }` (sendBeacon on pagehide) |
+| POST | `/api/plays` | batch of up to 100 `{ plays:[{ id?, trackId, startedAt, msPlayed, completed, skipped, context, deviceLabel }] }` → `{ ok, recorded }`. Optional client ULID `id` makes retries idempotent; unavailable tracks are ignored. Pagehide uses fetch keepalive with the CSRF header |
+| GET | `/api/plays` | own play history, `{ items, nextCursor }`; `limit` 1–500. The opaque cursor orders by timestamp and ID, preserving simultaneous plays |
 | CRUD | `/api/moments` | `{ trackId, atMs, label? }` |
 | GET/PUT | `/api/player-state` | `{ queue:[trackId], index, positionMs, shuffle, repeat, autoplay, updatedAt }` |
 | POST | `/api/visibility` | **Bulk privacy** (`VISIBILITY.md`): `{ targets:[{type:'track'|'album'|'playlist', id} | {type:'folder', path}], visibility:'private'|'public', applyToTracks?: bool, syncFuture?: bool, dryRun?: bool }` → `{ changeId?, tracksUpdated, albumsUpdated, playlistsUpdated, skippedNotOwned, alsoIn:{ publicPlaylists, publicAlbums } }`. `dryRun` returns counts only (the sheet calls it on open). Albums always apply to their tracks. Playlists only when `applyToTracks`, and only the caller's own tracks. Admins may target others' items with `private` only (takedown); `public` returns 403. Liked songs returns 400 |

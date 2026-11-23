@@ -2,6 +2,7 @@ import { beforeAll,afterAll,describe,it,expect } from 'vitest';
 import { startDemo,stopDemo,demoRequest,demoBinary,demoRaw,demoForm } from './demo-shim';
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
+import { id as eventId } from '../../app/src/library/ids';
 import { wav } from '../../scripts/make-chime.mjs';
 const base=/^https?:\/\//.test(process.env.API_BASE_URL||'')?process.env.API_BASE_URL!.replace(/\/$/,''):undefined;
 const demo=!base,username=demo?'demo':process.env.TEST_USERNAME||'contract_tester';
@@ -73,6 +74,15 @@ describe('shared API and auth contract',()=>{
    const completed=await owner.request(path+'/complete','POST',{metadata:{title:'Rejected',artist:'No added artist',durationMs:1000},album:{title:'No added album'}});expect(completed.status).toBe(mode==='hash'?409:415);expect(completed.body.error.code).toBe(mode==='hash'?'hash_mismatch':'unsupported');expect((await owner.request(path,'DELETE')).status).toBe(200);
   }
   const after=await owner.request('/api/library?since='+before);expect(Object.values(after.body.items).flat()).toHaveLength(0);expect((await owner.request('/api/auth/me')).body.user.used_bytes).toBe(used);
+ });
+ it('round-trips a sectioned queue and rejects invalid state without overwriting it',async()=>{
+  const id=uploaded.track.id,value={queue:[id,id],index:0,positionMs:12000,shuffle:false,repeat:'off',autoplay:true,updatedAt:Date.now(),sections:{context:[id],remaining:[],manual:[id],automatic:[],history:[],current:id,currentSource:'context',contextLabel:'Fixture album',contextType:'album:'+uploaded.album.id,shuffle:false,repeat:'off',autoplay:true}};
+  expect((await owner.request('/api/player-state','PUT',value)).body).toEqual(value);for(const invalid of [{...value,index:9},{...value,positionMs:-1},{...value,queue:['not-a-track']}])expect((await owner.request('/api/player-state','PUT',invalid)).status).toBe(400);expect((await owner.request('/api/player-state')).body).toEqual(value);
+ });
+ it('records immutable play events once and paginates equal timestamps without losing a play',async()=>{
+  const at=Date.now(),trackId=uploaded.track.id,plays=[{id:eventId(),trackId,startedAt:at,msPlayed:uploaded.track.duration_ms,completed:true,skipped:false,context:'album:'+uploaded.album.id,deviceLabel:'Contract player'},{id:eventId(),trackId,startedAt:at,msPlayed:1000,completed:false,skipped:true,context:'search',deviceLabel:'Contract player'}];
+  expect((await owner.request('/api/plays','POST',{plays})).body.recorded).toBe(2);expect((await owner.request('/api/plays','POST',{plays})).body.recorded).toBe(0);expect((await owner.request('/api/plays','POST',{plays:[{...plays[0],id:eventId(),trackId:'00000000000000000000000000'}]})).body.recorded).toBe(0);
+  const first=await owner.request('/api/plays?limit=1');expect(first.body.items).toHaveLength(1);expect(first.body.nextCursor).toBeTruthy();const second=await owner.request('/api/plays?limit=1&cursor='+first.body.nextCursor);expect(second.body.items).toHaveLength(1);expect(new Set([...first.body.items,...second.body.items].map(row=>row.id))).toEqual(new Set(plays.map(play=>play.id)));expect(second.body.nextCursor).toBeNull();expect((await owner.request('/api/plays','POST',{plays:[{...plays[0],msPlayed:-1}]})).status).toBe(400);
  });
 
 });
