@@ -14,6 +14,12 @@
     },
     "settings": {
       "accessibility": 100
+    },
+    "changelog": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
     }
   }
 }

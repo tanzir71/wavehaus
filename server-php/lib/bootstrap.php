@@ -74,6 +74,10 @@ function app_secret(): string {
         try { if (!file_exists($file)) { $content = "<?php\ndefine('APP_SECRET', '" . bin2hex(random_bytes(32)) . "');\n"; if (file_put_contents($file, $content, LOCK_EX) === false) fail('storage', 'Cannot write ' . $file, 503); @chmod($file, 0600); } }
         finally { flock($lock, LOCK_UN); fclose($lock); }
     }
+    // RESET_OWNER is deliberately edited outside the app. Shared hosts may
+    // cache this tiny file even after it changes; read the current flags now.
+    clearstatcache(true, $file);
+    if (function_exists('opcache_invalidate')) @opcache_invalidate($file, true);
     require_once $file;
     if (!defined('APP_SECRET') || strlen(APP_SECRET) < 64) fail('configuration', 'APP_SECRET must contain at least 32 random bytes.', 503);
     return APP_SECRET;
