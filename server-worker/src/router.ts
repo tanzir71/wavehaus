@@ -6,7 +6,7 @@ import type { Env } from './types';
 import { libraryRoutes } from './library';
 import { uploadsRoutes } from './uploads';
 import { artworkRoutes } from './art';
-export const VERSION='0.2.0',SCHEMA=4;
+export const VERSION='0.2.1',SCHEMA=4;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
  if(path==='/api/health'&&method==='GET')return json({ok:true,version:VERSION,schema:SCHEMA,backend:'worker',needsSetup:!await one(env.DB,'SELECT id FROM users LIMIT 1')});

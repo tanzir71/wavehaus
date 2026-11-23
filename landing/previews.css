@@ -1,0 +1,43 @@
+:root{--wh-text-tertiary:#858590}
+/* Keep native HTML preview contents in the proportions of the approved mockups. */
+.design-preview{display:block;width:100%;height:auto;overflow:hidden}
+.design-canvas{position:relative;overflow:hidden;color:var(--wh-text-primary);font-family:var(--wh-font-sans);line-height:normal;content-visibility:auto}
+:where(.design-canvas) p{color:inherit}
+.product-section{background:var(--wh-bg-base)}
+.product-stage{height:auto;max-width:1200px;width:calc(100% - 48px);margin:64px auto 0}
+.product-preview{width:100%;height:auto}
+.hero-device .lock-preview,.guide-phone .lock-preview{width:320px;height:660px;flex-shrink:0}
+.product-crop{height:auto;aspect-ratio:384/300}
+.product-crop>.design-preview{height:100%}
+.beyond-row>.design-preview{align-self:start}
+.closing-band h2{font-size:56px;line-height:60px;letter-spacing:-.03em}
+.wave-field{width:max(100%,1440px);height:560px;min-width:0}
+.footer-columns{grid-template-columns:minmax(320px,1fr) max-content max-content max-content;gap:48px;align-items:start}
+.footer-columns nav{font-size:12px;line-height:16px;font-weight:500;gap:10px;color:var(--wh-text-secondary)}
+.footer-columns nav>.eyebrow{color:var(--wh-text-tertiary);margin-bottom:0}
+.footer-credit{margin-top:28px;font:500 11px/14px var(--wh-font-mono);letter-spacing:.04em;color:var(--wh-text-tertiary)}
+.site-footer{padding-bottom:max(48px,env(safe-area-inset-bottom))}
+.infrastructure{background:var(--wh-surface-1);border-radius:12px;padding:8px 28px}
+.infrastructure>div{padding:18px 0;min-height:81px;grid-template-columns:150px 1fr}
+.infrastructure>div:last-child{border-bottom:0;min-height:80px}
+.infrastructure p{font-size:15px;line-height:22px}
+.infrastructure .eyebrow{font-size:11px;line-height:14px}
+@media(max-width:999px){
+ .product-section{min-height:0;padding-bottom:0}
+ .product-stage{margin-top:48px;width:100%}
+ .hero-device .lock-preview,.guide-phone .lock-preview{width:272px;height:561px}
+ .footer-columns{grid-template-columns:minmax(200px,1fr) max-content max-content max-content;gap:24px}
+ .closing-band h2{font-size:44px;line-height:48px}
+ .infrastructure>div{grid-template-columns:100px 1fr;gap:16px}
+ .infrastructure p{font-size:13px;line-height:18px}
+}
+@media(max-width:719px){
+ .product-stage{margin:40px -24px 0;width:calc(100% + 48px)}
+ .hero-device .lock-preview,.guide-phone .lock-preview{width:320px;height:660px}
+ .closing-band h2{font-size:30px;line-height:34px}
+ .footer-columns{grid-template-columns:1fr 1fr;gap:32px 24px}
+ .footer-columns nav{font-size:13px;line-height:18px;gap:12px}
+ .footer-credit{margin-top:36px;font-size:10px;line-height:16px}
+ .site-footer{padding-bottom:max(32px,env(safe-area-inset-bottom))}
+ .infrastructure{padding:8px 20px}
+}
