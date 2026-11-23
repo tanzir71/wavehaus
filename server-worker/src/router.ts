@@ -10,9 +10,11 @@ import { playbackRoutes } from './playback';
 import { journalRoutes } from './journal-routes';
 import { metadataRoutes } from './metadata';
 import {visibilityRoutes} from './visibility';
+import {readApi} from './read-api';
+import {tokenRoutes} from './tokens';
 import {accessRoutes,registrationRoutes} from './access';
 import {playlistRoutes} from './playlists';
-export const VERSION='0.7.0',SCHEMA=8;
+export const VERSION='0.8.0',SCHEMA=9;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
  if(path==='/api/health'&&method==='GET')return json({ok:true,version:VERSION,schema:SCHEMA,backend:'worker',needsSetup:!await one(env.DB,'SELECT id FROM users LIMIT 1')});
@@ -20,6 +22,8 @@ export async function apiRoute(request:Request,env:Env,path=new URL(request.url)
  const registration=await registrationRoutes(request,env,path);if(registration)return registration;
  const result=await authRoutes(request,env,path);if(result)return result;
  const auth=(await currentAuth(request,env))!;
+ const read=await readApi(request,env,auth,path);if(read)return read;
+ const tokens=await tokenRoutes(request,env,auth,path);if(tokens)return tokens;
  const access=await accessRoutes(request,env,auth,path);if(access)return access;
  const journal=await journalRoutes(request,env,auth,path);if(journal)return journal;
  const metadata=await metadataRoutes(request,env,auth,path);if(metadata)return metadata;

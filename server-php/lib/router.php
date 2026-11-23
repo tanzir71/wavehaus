@@ -11,6 +11,8 @@ function route_request(PDO $db,string $path,string $method): never {
     if(registration_routes($db,$path,$method))exit;
     if(auth_routes($db,$path,$method))exit;
     $auth=current_auth($db);
+    if(read_api($db,$auth,$path,$method))exit;
+    if(tokens_routes($db,$auth,$path,$method))exit;
     if(access_routes($db,$auth,$path,$method))exit;
     if(journal_routes($db,$auth,$path,$method))exit;
     if(metadata_routes($db,$auth,$path,$method))exit;

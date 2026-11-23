@@ -6,7 +6,7 @@ export interface Track extends Row {
  peaks:string|null; storage_key:string; size_bytes:number; sha256:string; quick_hash:string; original_name:string; original_path:string|null;
  visibility:Visibility; organise_source:string; added_at:number; updated_at:number; lyrics?:string|null; sample_rate?:number|null; bitrate?:number|null;
 }
-export interface Album extends Row { owner_id:string; title:string; artist_id:string; artist_name:string; year?:number|null; tint:number; art_source:string; art_key?:string|null; visibility:Visibility; sync_visibility:number; folder_path?:string|null; created_at:number; merge_key?:string|null; identity_key?:string|null }
+export interface Album extends Row {last_actor?:string|null;last_actor_name?:string|null; owner_id:string; title:string; artist_id:string; artist_name:string; year?:number|null; tint:number; art_source:string; art_key?:string|null; visibility:Visibility; sync_visibility:number; folder_path?:string|null; created_at:number; merge_key?:string|null; identity_key?:string|null }
 export interface Artist extends Row { name:string; sort_name:string; tint:number }
 export interface Playlist extends Row { owner_id:string; name:string; description?:string; kind?:'manual'|'smart';rules?:string|null;cover_key?:string|null;visibility:Visibility; sync_visibility:number; created_at:number; updated_at:number }
 export interface PlaylistItem { id?:string;owner_id?:string;playlist_id:string; track_id:string; position:number; added_at:number; rev:number; deleted:number }
@@ -22,5 +22,5 @@ export interface Api {
  readonly demo:boolean;
 }
 export const emptyLibrary=():Library=>({tracks:[],albums:[],artists:[],playlists:[],playlistItems:[],likes:[],moments:[]});
-export class ApiError extends Error { constructor(public code:string,message:string,public status:number,public retryAfter?:number){super(message);} }
+export class ApiError extends Error { constructor(public code:string,message:string,public status:number,public retryAfter?:number,public conflicts?:{table:string;id:string}[]){super(message);} }
 export const json=(value:unknown,method='POST'):RequestInit=>({method,headers:{'Content-Type':'application/json','X-Wavehaus':'1'},body:JSON.stringify(value)});

@@ -1,0 +1,3 @@
+import {build} from 'vite';
+import {resolve} from 'node:path';
+export async function buildTools(){await build({configFile:false,logLevel:'warn',build:{target:'es2022',outDir:'tools/dist',emptyOutDir:true,minify:false,lib:{entry:resolve('tools/shared-entry.ts'),formats:['es'],fileName:()=> 'organise.mjs'}}});await build({configFile:false,logLevel:'warn',build:{ssr:resolve('tools/src/mcp.mjs'),target:'node18',outDir:'tools/dist',emptyOutDir:false,minify:false,rolldownOptions:{external:id=>id.startsWith('node:')||['music-metadata','sharp','../dist/organise.mjs'].includes(id),output:{entryFileNames:'mcp.mjs',chunkFileNames:'[name]-[hash].mjs'}}}});}

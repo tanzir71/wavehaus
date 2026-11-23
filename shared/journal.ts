@@ -1,12 +1,12 @@
 import {UploadError} from './upload-input';
 export type JournalTable='tracks'|'albums'|'artists'|'playlists'|'playlist_items'|'folder_rules';
-export const reversibleOperation=(op:JournalOp)=>!op.system&&(op.table!=='artists'||!op.before||Object.keys(op.after).some(key=>key!=='id'&&key!=='rev'));
+export const reversibleOperation=(op:JournalOp)=>(!op.system||op.audit===true)&&(op.table!=='artists'||!op.before||Object.keys(op.after).some(key=>key!=='id'&&key!=='rev'));
 export type JournalRow=Record<string,unknown>&{id:string;rev:number};
-export interface JournalOp {system?:boolean;table:JournalTable;id:string;before:JournalRow|null;after:JournalRow}
+export interface JournalOp {system?:boolean;audit?:boolean;table:JournalTable;id:string;before:JournalRow|null;after:JournalRow}
 export interface JournalChange {id:string;created_at:number;undone_at:number|null;undoable?:number;ops:JournalOp[]}
 export interface RowGuard {system?:boolean;table:JournalTable;id:string;rev:number}
-export interface CountGuard {table:'tracks'|'albums'|'playlist_items'|'folder_rules';column:'album_id'|'artist_id'|'playlist_id'|'track_id'|'original_path';id:string;count:number;ownerId?:string;prefix?:boolean}
-export interface JournalWrite {summary:string;ops:JournalOp[];guards?:RowGuard[];counts?:CountGuard[];appendTo?:string;undoIds?:string[];undoable?:boolean}
+export interface CountGuard {table:'tracks'|'albums'|'playlist_items';column:'album_id'|'artist_id'|'playlist_id'|'track_id'|'original_path';id:string;count:number;ownerId?:string;prefix?:boolean}
+export interface JournalWrite {summary:string;ops:JournalOp[];guards?:RowGuard[];counts?:CountGuard[];appendTo?:string;undoIds?:string[];undoable?:boolean;undoNote?:string}
 export const journalColumns:Record<JournalTable,readonly string[]>={
  tracks:['owner_id','album_id','artist_id','title','artist_name','album_artist','album_title','track_no','disc_no','year','genre','bpm','duration_ms','codec','container','bitrate','sample_rate','bit_depth','channels','replaygain_track_db','replaygain_album_db','has_lyrics','lyrics','lyrics_synced','peaks','storage_key','size_bytes','sha256','quick_hash','original_name','original_path','mime','visibility','organise_source','added_at','deleted'],
  albums:['owner_id','title','artist_id','artist_name','year','art_source','art_key','tint','visibility','sync_visibility','folder_path','created_at','deleted','merge_key','identity_key'],
@@ -38,7 +38,7 @@ export function compactLegacyOp(op:JournalOp):JournalOp {
  * its virtual revision walks back through their snapshots before any write.
  * The adapter must recheck guards atomically and allocate fresh revisions.
  */
-export function undoPlan(changes:JournalChange[],current:Map<string,JournalRow>,now=Date.now()){
+export function undoPlan(changes:JournalChange[],current:Map<string,JournalRow>,now=Date.now(),skipConflicts=false){
  if(!changes.length)throw new UploadError('validation','Choose an action to undo.');
  if(changes.length>2000||changes.reduce((n,c)=>n+c.ops.length,0)>10000)throw new UploadError('too_large','Undo fewer actions at once.',413);
  if(changes.some(change=>change.undone_at!==null))throw new UploadError('already_undone','An action in this batch was already undone.',409);
@@ -58,8 +58,8 @@ export function undoPlan(changes:JournalChange[],current:Map<string,JournalRow>,
   if(op.before){for(const column of journalColumns[op.table])if(column in op.before)row[column]=op.before[column];row.rev=op.before.rev;}
   else{row.deleted=1;row.rev=0;}
  }
- if(conflicts.size)throw new JournalConflict([...conflicts.values()]);
+ if(conflicts.size&&!skipConflicts)throw new JournalConflict([...conflicts.values()]);for(const key of conflicts.keys()){touched.delete(key);const original=current.get(key);if(original)virtual.set(key,{...original});else virtual.delete(key);}
  const ops:JournalOp[]=[],guards:({table:JournalTable}&JournalRow)[]=[];
- for(const[key,record]of touched){const before=current.get(key)!,after=virtual.get(key)!;guards.push({table:record.table,...before});const op=journalOp(record.table,before,after);if(op)ops.push(op);else if(record.table==='playlists')ops.push({table:'playlists',id:before.id,before:{id:before.id,rev:before.rev},after:{id:before.id,rev:before.rev}});}
- return {ops,guards,changeIds:ordered.map(change=>change.id),virtual};
+ for(const[key,record]of touched){const before=current.get(key)!,after=virtual.get(key)!;guards.push({table:record.table,...before});const op=journalOp(record.table,before,after);if(op)ops.push(op);else if(record.table==='playlists'||record.table==='albums')ops.push({table:record.table,id:before.id,before:{id:before.id,rev:before.rev},after:{id:before.id,rev:before.rev}});}
+ return {ops,guards,changeIds:ordered.map(change=>change.id),virtual,skipped:[...conflicts.values()]};
 }

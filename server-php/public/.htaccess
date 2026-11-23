@@ -1,5 +1,6 @@
 Options -Indexes
 RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 RewriteRule ^(?:lib|migrations|data[^/]*)(?:/|$) - [F,L]
 RewriteRule (^|/)\. - [F,L]
 RewriteRule ^app/?$ index.php [QSA,L]

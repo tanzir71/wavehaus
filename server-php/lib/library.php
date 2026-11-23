@@ -8,7 +8,7 @@ function readable_track(PDO $db,array $auth,string $id): array {
     if($track['owner_id']!==$auth['user']['id']&&$track['visibility']!=='public')fail('forbidden','This track is private.',403);return $track;
 }
 function log_change(PDO $db,array $auth,string $summary,array $ops): string {
-    $id=ulid();execute($db,'INSERT INTO changes(id,user_id,actor,session_label,summary,ops,created_at) VALUES(?,?,?,?,?,?,?)',[$id,$auth['user']['id'],'web',$auth['session']['device_label'],$summary,json_encode($ops,JSON_THROW_ON_ERROR),now_ms()]);return $id;
+    $id=ulid();execute($db,'INSERT INTO changes(id,user_id,actor,session_label,token_name,summary,ops,created_at) VALUES(?,?,?,?,?,?,?,?)',[$id,$auth['user']['id'],isset($auth['token'])?'api':'web',$auth['session']['device_label'],$auth['token']['name']??null,$summary,json_encode($ops,JSON_THROW_ON_ERROR),now_ms()]);return $id;
 }
 function ensure_artist(PDO $db,string $name,string $album): array {
     $key=normalized_name($name);$artist=query_one($db,'SELECT * FROM artists WHERE name_key=? AND deleted=0',[$key]);if($artist){$artist['rev']=next_rev($db);execute($db,'UPDATE artists SET rev=? WHERE id=?',[$artist['rev'],$artist['id']]);return $artist;}

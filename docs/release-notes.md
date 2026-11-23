@@ -1,13 +1,15 @@
-Wavehaus M7 adds private/public controls and member access management.
+Wavehaus M8 adds assistant operation, scoped API tokens and a local MCP server.
 
 Preview: https://tanzir71.github.io/wavehaus/
 App: https://tanzir71.github.io/wavehaus/app/
 
 What to try:
-1. Make a playlist public with its own-track checkbox, then make it private in one tap.
-2. Select folders or albums in Library and apply privacy together; Undo restores previous values.
-3. Open Access & members, create an invitation, or choose a registration mode and manage requests.
+1. Open AI assistants, create a named token with scopes and expiry, and save its one-time value.
+2. Use the browser upload/review/bulk controls, then filter Activity by Browser or API.
+3. Copy tools from a production archive and configure your MCP client with your own server URL and token.
 
-The PHP, Worker and demo adapters support invitations, approval links, roles, quotas and ownership transfer. Registration uses self-hosted proof-of-work with expiring, single-use claims, a honeypot, minimum fill time and rate limits. Email remains optional. Folder visibility defaults persist through redeploys; public relationship revisions restore incremental library entries after republishing.
+Both server archives include the built Node stdio server and shared organiser. It supports local tag reading when music-metadata is installed, falls back to folder/filename rules, resumes chunks and keeps new uploads private. Artwork uses optional sharp or a validated original. No runtime dependency is required for the core CLI server; existing optional libraries were not added to the dependency budget.
 
-Publication builds completed: production initial JavaScript 61.7 KiB gzip, demo 73.7 KiB, Worker bundle 45.05 KiB gzip. Both production archives are attached. No new dependency. As requested, only builds needed for publication were run; no additional tests, browser checks or physical-device checks were performed.
+Token authentication, scopes, expiry, rate limits and attribution are implemented on PHP, Worker and the browser demo. Conflict-aware Undo can retain newer rows and restore the remaining rows with relationship guards. Protocol support includes modern request metadata and legacy initialization.
+
+As requested, only builds needed for packaging and publication were run. No further tests, browser checks, Lighthouse runs or physical-device checks were performed.

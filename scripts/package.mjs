@@ -17,11 +17,11 @@ async function zip(name,entries){
  const central=Buffer.concat(directory),end=Buffer.alloc(22);end.writeUInt32LE(0x06054b50);end.writeUInt16LE(entries.length,8);end.writeUInt16LE(entries.length,10);end.writeUInt32LE(central.length,12);end.writeUInt32LE(offset,16);const bytes=Buffer.concat([...locals,central,end]);await writeFile(resolve('dist',name),bytes);console.log(`${name}: ${(bytes.length/1024**2).toFixed(2)} MB, ${entries.length} files`);
 }
 await mkdir('dist',{recursive:true});
-const app=await files('app/dist','app/'),migrations=await files('migrations','migrations/');
+const app=await files('app/dist','app/'),migrations=await files('migrations','migrations/'),cli=(await files('tools','tools/')).filter(file=>file.name.endsWith('.mjs')||file.name.endsWith('.md'));
 await zip(`wavehaus-shared-hosting-v${version}.zip`,[
- ...await files('server-php/public'),...await files('server-php/lib','lib/'),...migrations,...app,
+ ...await files('server-php/public'),...await files('server-php/lib','lib/'),...migrations,...app,...cli,
  {name:'VERSION',data:version},{name:'README.txt',data:await readFile('server-php/README.md')},{name:'MEDIA-OFFLOAD.md',data:await readFile('docs/media-offload.md')},{name:'LICENSE',data:await readFile('LICENSE')}
 ]);
 const worker=await files('server-worker/src','server-worker/src/');
 for(const name of ['package.json','package-lock.json','wrangler.toml','tsconfig.json'])worker.push({name:'server-worker/'+name,data:await readFile('server-worker/'+name)});
-await zip(`wavehaus-worker-v${version}.zip`,[...worker,...await files('shared','shared/'),...migrations,...app.map(f=>({...f,name:'app/dist/'+f.name.slice(4)})),{name:'README.md',data:await readFile('server-worker/README.md')},{name:'LICENSE',data:await readFile('LICENSE')},{name:'VERSION',data:version}]);
+await zip(`wavehaus-worker-v${version}.zip`,[...worker,...cli,...await files('shared','shared/'),...migrations,...app.map(f=>({...f,name:'app/dist/'+f.name.slice(4)})),{name:'README.md',data:await readFile('server-worker/README.md')},{name:'LICENSE',data:await readFile('LICENSE')},{name:'VERSION',data:version}]);

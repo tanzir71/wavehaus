@@ -45,6 +45,7 @@ function session_cookie(string $raw, bool $clear = false): void {
 function current_auth(PDO $db, bool $required = true): ?array {
     static $cached = false;
     if ($cached !== false) { if ($required && $cached === null) fail('unauthenticated', 'Sign in to continue.', 401); return $cached; }
+    $bearer=bearer_auth($db);if($bearer){$cached=$bearer;return $cached;}
     $raw = $_COOKIE['__Host-wh_session'] ?? '';
     $session = is_string($raw) && strlen($raw) < 256 ? query_one($db, 'SELECT * FROM sessions WHERE token_hash=? AND expires_at>?', [hash('sha256',$raw),now_ms()]) : false;
     $user = $session ? query_one($db, "SELECT * FROM users WHERE id=? AND status='active'", [$session['user_id']]) : false;

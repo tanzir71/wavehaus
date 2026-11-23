@@ -1,6 +1,6 @@
 {
   "name": "wavehaus",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -26,7 +26,8 @@
     "test:journal:demo": "vitest run --config vitest.journal.config.ts",
     "e2e": "playwright test",
     "package": "node scripts/package.mjs",
-    "preview": "node scripts/serve.mjs"
+    "preview": "node scripts/serve.mjs",
+    "mcp": "node tools/mcp.mjs"
   },
   "dependencies": {
     "@preact/signals": "2.11.4",

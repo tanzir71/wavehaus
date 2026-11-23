@@ -6,24 +6,26 @@ import { JournalConflict } from '../../../shared/journal';
 import { ApiError,emptyLibrary,type Api,type Album,type Library,type Track } from '../api/types';
 
 import { getArt,getBlob,rangeResponse } from '../../public/runtime/media.js';
-import { mutate,readState,type DemoState } from './store';
+import { currentDemoToken,setDemoToken,mutate,readState,type DemoState } from './store';
 import { seed } from './seed';
 import { demoAuth,ensureAuth,demoSignedIn } from './auth';
 export { seed };
 const response=(data:unknown,status=200)=>new Response(status===204?null:JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 function fail(code:string,message:string,status=400):never {throw new ApiError(code,message,status);}
-export async function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise<Response>{
+async function demoFetchCore(input:RequestInfo|URL,init?:RequestInit):Promise<Response>{
  const request=input instanceof Request?input:new Request(new URL(String(input),location.origin),init);const url=new URL(request.url),path=url.pathname.replace(/^.*?(\/(?:api|demo-media|media|demo-art|art)\/)/,'$1'),method=request.method;
  try{
  await seed();await ensureAuth();
  if(path.startsWith('/demo-media/')||path.startsWith('/media/')){const state=(await readState())!;if(!demoSignedIn(state))fail('unauthenticated','Sign in to continue.',401);const track=state.tracks.find(t=>t.id===path.split('/')[2]&&!t.deleted);if(track&&track.owner_id!==state.user.id&&track.visibility!=='public')fail('forbidden','This track is private.',403);const blob=track?await getBlob(`audio-${track.id}`):null;return blob&&track?rangeResponse(blob,request,track.mime,`"${track.sha256}"`):response({error:{code:'not_found',message:'Track not found'}},404);}
- if(!['GET','HEAD'].includes(method)&&request.headers.get('X-Wavehaus')!=='1')return response({error:{code:'csrf',message:'Missing X-Wavehaus header.'}},403);
+ if(!['GET','HEAD'].includes(method)&&request.headers.get('X-Wavehaus')!=='1'&&!currentDemoToken())return response({error:{code:'csrf',message:'Missing X-Wavehaus header.'}},403);
  const body=()=>request.json();const s=(await readState())!;
- if(path==='/api/health')return response({ok:true,version:'0.7.0',schema:8,backend:'demo',needsSetup:false});
+ if(path==='/api/health')return response({ok:true,version:'0.8.0',schema:9,backend:'demo',needsSetup:false});
  if(path==='/api/config')return response({serverName:s.settings.server_name,registrationMode:s.settings.registration_mode,maxChunkBytes:8*1024*1024,maxFileBytes:2*1024**3,powDifficulty:18,features:{demo:true,uploads:true}});
  if(['/api/auth/challenge','/api/auth/register','/api/auth/request-access'].includes(path)||path.startsWith('/api/admin/')||path.startsWith('/api/invites')){const{demoAccess}=await import('./access');const result=await demoAccess(request,path);if(result)return result;}
+ if(path.startsWith('/api/tokens')){const{demoTokens}=await import('./tokens');const result=await demoTokens(request,path);if(result)return result;}
  const authentication=await demoAuth(request,path);if(authentication)return authentication;
  if(!demoSignedIn(s))fail('unauthenticated','Sign in to continue.',401);
+ if(request.method==='GET'&&(['/api/search','/api/tracks','/api/albums'].includes(path)||/^\/api\/albums\/[0-9A-HJKMNP-TV-Z]{26}$/.test(path))){const{demoReadApi}=await import('./read-api');const result=await demoReadApi(request,path);if(result)return result;}
  if(path.startsWith('/api/changes')){const {demoJournal}=await import('./journal');const result=await demoJournal(request,path);if(result)return result;}
  if(path==='/api/tracks'&&['PATCH','DELETE'].includes(method)){const{demoEdits}=await import('./edits');return (await demoEdits(request,path))!;}
  if(path.startsWith('/api/albums/')&&(method==='PATCH'||path==='/api/albums/merge'&&method==='POST')){const{demoEdits}=await import('./edits');const result=await demoEdits(request,path);if(result)return result;}
@@ -51,4 +53,6 @@ export async function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise
  return response({error:{code:'not_found',message:'This endpoint is not available in this release.'}},404);
  }catch(error){if(error instanceof DOMException&&error.name==='AbortError')throw error;const e=error instanceof ApiError||error instanceof UploadError?error:new ApiError('internal',error instanceof Error?error.message:'Something went wrong.',500);return response({error:{code:e.code,message:e.message,retryAfter:e instanceof ApiError?e.retryAfter:undefined,...(e instanceof JournalConflict?{conflicts:e.conflicts}:{})}},e.status);}
 }
-export const api:Api={demo:true,async request<T>(path:string,init:RequestInit={}){const headers=new Headers(init.headers);if(init.method&&!['GET','HEAD'].includes(init.method))headers.set('X-Wavehaus','1');const res=await demoFetch(path,{...init,headers});if(!res.ok){const {error}=await res.json();throw new ApiError(error.code,error.message,res.status);}return res.status===204?undefined as T:res.json();},mediaUrl:t=>`${import.meta.env.BASE_URL}demo-media/${t.id}`,artUrl:(a,size=600)=>`${import.meta.env.BASE_URL}demo-art/${a.id}/${a.art_source==='generated'?'generated-512.png':`${size}.webp`}?v=${a.rev}`};
+let requestSerial=Promise.resolve();
+export function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise<Response>{const operation=async()=>{const request=input instanceof Request?input:new Request(new URL(String(input),location.origin),init);try{if(request.headers.get('Authorization')?.startsWith('Bearer ')){await seed();await ensureAuth();const path=new URL(request.url).pathname.replace(/^.*?(\/(?:api|demo-media|media|demo-art|art)\/)/,'$1'),{authenticateDemoToken}=await import('./tokens');setDemoToken(await authenticateDemoToken(request,path));}return await demoFetchCore(request);}catch(error){const item=error instanceof ApiError||error instanceof UploadError?error:new ApiError('internal','The demo could not complete this request.',500);return response({error:{code:item.code,message:item.message}},item.status);}finally{setDemoToken(null);}};const next=requestSerial.then(operation,operation);requestSerial=next.then(()=>{},()=>{});return next;}
+export const api:Api={demo:true,async request<T>(path:string,init:RequestInit={}){const headers=new Headers(init.headers);if(init.method&&!['GET','HEAD'].includes(init.method))headers.set('X-Wavehaus','1');const res=await demoFetch(path,{...init,headers});if(!res.ok){const {error}=await res.json();throw new ApiError(error.code,error.message,res.status,error.retryAfter,error.conflicts);}return res.status===204?undefined as T:res.json();},mediaUrl:t=>`${import.meta.env.BASE_URL}demo-media/${t.id}`,artUrl:(a,size=600)=>`${import.meta.env.BASE_URL}demo-art/${a.id}/${a.art_source==='generated'?'generated-512.png':`${size}.webp`}?v=${a.rev}`};

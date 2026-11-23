@@ -47,3 +47,5 @@ Open the app in Brave on Android, enable **Settings → Media → Background pla
 Runtime dependencies: Preact, Signals, idb-keyval, MiniSearch and lazy-loaded music-metadata. Plain CSS, a hand-written service worker and original generated audio. [Dependency decisions](docs/DEPENDENCIES.md).
 
 MIT licensed. Geist fonts retain the OFL; icon and photography credits are included with the assets.
+
+Assistants can use the labelled browser UI or [scoped tokens and the MCP server](tools/README.md). Build-only publication follows the owner's instruction to stop further testing.

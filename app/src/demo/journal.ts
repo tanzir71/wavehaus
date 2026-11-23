@@ -1,11 +1,12 @@
 import {journalColumns,JournalConflict,compactLegacyOp,undoPlan,reversibleOperation,type JournalRow,type JournalOp,type JournalChange,type JournalTable,type JournalWrite} from '../../../shared/journal';
-import {refreshTargets,visibilityRefresh} from '../../../shared/visibility-refresh';
+import {refreshTargets,visibilityRefresh,auditAlbumRows} from '../../../shared/visibility-refresh';
+import {undoDependencies,guardUndoDependencies,retainUndoRows,type UndoPlan} from '../../../shared/undo-references';
 import {rowIds} from '../../../shared/edit-input';
 import {ApiError} from '../api/types';
 import {id} from '../library/ids';
 import {demoSignedIn} from './auth';
-import {mutate,readState,type DemoState} from './store';
-type Change=JournalChange&{user_id:string;summary:string;actor:string;session_label:string;journalOps?:JournalOp[];audience?:string[]};
+import {currentDemoToken,mutate,readState,type DemoState} from './store';
+type Change=JournalChange&{user_id:string;summary:string;actor:string;token_name?:string|null;session_label:string;journalOps?:JournalOp[];audience?:string[];undo_note?:string|null};
 const encoder=new TextEncoder(),tables:JournalTable[]=['artists','albums','tracks','playlists','playlist_items','folder_rules'];
 const rows=(state:DemoState,table:JournalTable)=>state[table==='playlist_items'?'playlistItems':table==='folder_rules'?'folderRules':table] as unknown as JournalRow[];
 function signedIn(state:DemoState){if(!demoSignedIn(state))throw new ApiError('unauthenticated','Sign in to continue.',401);}
@@ -14,7 +15,7 @@ function ownParent(state:DemoState,parent:Change|undefined,now:number){if(!paren
 
 /** Called only inside the demo's account-checked IndexedDB write lock. */
 export function demoWriteJournal(state:DemoState,plan:JournalWrite){
- signedIn(state);const targets=refreshTargets(plan);state.folderRules||=[];if(targets.trackIds.length||targets.albumIds.length||targets.playlistIds.length){const artistIds=new Set([...state.tracks.filter(row=>targets.trackIds.includes(row.id)),...state.albums.filter(row=>targets.albumIds.includes(row.id))].map(row=>row.artist_id));plan=visibilityRefresh(plan,state.artists.filter(row=>!row.deleted&&artistIds.has(row.id)) as unknown as JournalRow[],state.playlistItems.filter(row=>!row.deleted&&(targets.trackIds.includes(row.track_id)||targets.playlistIds.includes(row.playlist_id))) as unknown as JournalRow[]);}if(state.user.role==='listener'&&!plan.ops.every(op=>op.system||op.table==='playlists'||op.table==='playlist_items'))throw new ApiError('forbidden','Your account cannot edit library metadata.',403);
+ signedIn(state);const targets=refreshTargets(plan);state.folderRules||=[];if(targets.trackIds.length||targets.albumIds.length||targets.playlistIds.length){const artistIds=new Set([...state.tracks.filter(row=>targets.trackIds.includes(row.id)),...state.albums.filter(row=>targets.albumIds.includes(row.id))].map(row=>row.artist_id));plan=visibilityRefresh(plan,state.artists.filter(row=>!row.deleted&&artistIds.has(row.id)) as unknown as JournalRow[],state.playlistItems.filter(row=>!row.deleted&&(targets.trackIds.includes(row.track_id)||targets.playlistIds.includes(row.playlist_id))) as unknown as JournalRow[]);}if(currentDemoToken()){const changed=plan.ops.filter(op=>op.table==='tracks'),albumIds=new Set([...state.tracks.filter(row=>changed.some(op=>op.id===row.id)).map(row=>row.album_id),...changed.flatMap(op=>typeof op.after.album_id==='string'?[op.after.album_id]:[])]);plan=auditAlbumRows(plan,state.albums.filter(row=>albumIds.has(row.id)) as unknown as JournalRow[]);}if(state.user.role==='listener'&&!plan.ops.every(op=>op.system||op.table==='playlists'||op.table==='playlist_items'))throw new ApiError('forbidden','Your account cannot edit library metadata.',403);
  if(plan.ops.length>10000||(plan.undoIds?.length||0)>2000)throw new ApiError('too_large','Choose fewer records at once.',413);
  if(!plan.ops.length&&!plan.undoIds?.length)return {changeId:plan.appendTo||null,updated:0};
  if(new Set(plan.ops.map(op=>op.table+':'+op.id)).size!==plan.ops.length)throw new Error('Consolidate record operations before committing.');
@@ -28,41 +29,37 @@ export function demoWriteJournal(state:DemoState,plan:JournalWrite){
  if(encoder.encode(JSON.stringify([...(parent?.ops||[]),...(parent?.journalOps||[]),...plan.ops])).byteLength>16*1024**2)throw new ApiError('too_large','This edit needs too much undo data. Choose fewer rows.',413);
  const created=new Map(tables.map(table=>[table,new Set(plan.ops.filter(op=>op.table===table&&!op.before).map(op=>op.id))]));
  for(const op of plan.ops)for(const[column,target]of [['album_id','albums'],['artist_id','artists']] as const)if(Object.hasOwn(op.after,column)&&op.after[column]!==null&&!rows(state,target).some(row=>row.id===op.after[column])&&!created.get(target)!.has(String(op.after[column])))throw new Error('Invalid record reference.');
- const changeId=parent?.id||id(),entry:Change=parent||{id:changeId,user_id:state.user.id,actor:'web',session_label:'This browser · demo',summary:plan.summary,ops:[],journalOps:[],created_at:now,undone_at:null,undoable:plan.undoable===false?0:1},base=state.rev;
+ const changeId=parent?.id||id(),entry:Change=parent||{id:changeId,user_id:state.user.id,actor:currentDemoToken()?'api':'web',token_name:currentDemoToken()?.name||null,session_label:'This browser · demo',summary:plan.summary,ops:[],journalOps:[],created_at:now,undone_at:null,undoable:plan.undoable===false?0:1},base=state.rev;
  state.rev+=plan.ops.length;
  for(const table of tables)for(const[ index,op]of plan.ops.entries())if(op.table===table){
   const patch=Object.fromEntries(journalColumns[table].filter(column=>Object.hasOwn(op.after,column)).map(column=>[column,op.after[column]])),revision=base+index+1;
-  if(op.before){const row=rows(state,table).find(row=>row.id===op.id)!,becamePrivate=['tracks','albums','playlists'].includes(table)&&row.visibility==='public'&&patch.visibility==='private';Object.assign(row,patch,{rev:revision},table==='tracks'||table==='playlists'?{updated_at:now}:{},becamePrivate?{hidden_rev:revision}:{});}
-  else rows(state,table).push({...(table==='albums'?{art_source:'generated',art_key:null,visibility:'private',sync_visibility:1,year:null,folder_path:null}:{}),deleted:0,...patch,id:op.id,rev:revision});
+  if(op.before){const row=rows(state,table).find(row=>row.id===op.id)!,becamePrivate=['tracks','albums','playlists'].includes(table)&&row.visibility==='public'&&patch.visibility==='private';Object.assign(row,patch,{rev:revision},table==='tracks'||table==='playlists'?{updated_at:now}:table==='albums'?{last_actor:currentDemoToken()?'api':'web',last_actor_name:currentDemoToken()?.name||'This browser · demo'}:{},becamePrivate?{hidden_rev:revision}:{});}
+  else rows(state,table).push({...(table==='albums'?{art_source:'generated',art_key:null,visibility:'private',sync_visibility:1,year:null,folder_path:null}:{}),deleted:0,...patch,...table==='albums'?{last_actor:currentDemoToken()?'api':'web',last_actor_name:currentDemoToken()?.name||'This browser · demo'}:{},id:op.id,rev:revision});
  }
  entry.audience=[...new Set([...(entry.audience||[]),...plan.ops.filter(op=>['tracks','albums'].includes(op.table)&&op.after.visibility==='private').flatMap(op=>{const row=rows(state,op.table).find(row=>row.id===op.id);return row&&row.owner_id!==state.user.id?[String(row.owner_id)]:[];})])];
  entry.journalOps||=[];entry.journalOps.push(...plan.ops.flatMap((op,index)=>reversibleOperation(op)?[{...op,before:op.before?{...op.before}:null,after:{...op.after,rev:base+index+1}}]:[]));
- if(!parent)changes.unshift(entry);for(const changeId of plan.undoIds||[])changes.find(change=>change.id===changeId)!.undone_at=now;
+ if(!parent)changes.unshift(entry);for(const changeId of plan.undoIds||[])Object.assign(changes.find(change=>change.id===changeId)!,{undone_at:now,undo_note:plan.undoNote||null});
  return {changeId,updated:plan.ops.filter(op=>op.table==='tracks').length};
 }
 export async function demoJournal(request:Request,path:string):Promise<Response|null>{
  if(path==='/api/changes'&&request.method==='GET'){
-  const state=(await readState())!;signedIn(state);const query=new URL(request.url).searchParams,raw=query.get('limit')??'50',limit=Number(raw);if(!/^[1-9]\d{0,2}$/.test(raw)||limit>100)throw new ApiError('validation','Use an activity page size from 1 to 100.',400);
-  const cursor=query.get('cursor'),match=cursor?.match(/^(\d{1,16})(?:\.([0-9A-HJKMNP-TV-Z]{26}))?$/);if(cursor&&(!match||!Number.isSafeInteger(Number(match[1]))))throw new ApiError('validation','Invalid activity cursor.',400);
-  const at=match?Number(match[1]):Number.MAX_SAFE_INTEGER,key=match?.[2]||'Z'.repeat(26),changes=(state.changes as unknown as Change[]).filter(change=>(change.user_id===state.user.id||change.audience?.includes(state.user.id))&&(change.created_at<at||change.created_at===at&&change.id<key)).sort((a,b)=>b.created_at-a.created_at||b.id.localeCompare(a.id)),items=[];let bytes=0;
+  await mutate(state=>{for(const row of state.changes)if(Number(row.created_at)<Date.now()-30*86400000){row.ops=[];row.journalOps=[];row.undoable=0;}});const state=(await readState())!;signedIn(state);const query=new URL(request.url).searchParams,raw=query.get('limit')??'50',limit=Number(raw);if(!/^[1-9]\d{0,2}$/.test(raw)||limit>100)throw new ApiError('validation','Use an activity page size from 1 to 100.',400);
+  const actor=query.get('actor');if(actor&&!['web','api'].includes(actor))throw new ApiError('validation','Choose Web or API activity.',400);const cursor=query.get('cursor'),match=cursor?.match(/^(\d{1,16})(?:\.([0-9A-HJKMNP-TV-Z]{26}))?$/);if(cursor&&(!match||!Number.isSafeInteger(Number(match[1]))))throw new ApiError('validation','Invalid activity cursor.',400);
+  const at=match?Number(match[1]):Number.MAX_SAFE_INTEGER,key=match?.[2]||'Z'.repeat(26),changes=(state.changes as unknown as Change[]).filter(change=>(change.user_id===state.user.id||change.audience?.includes(state.user.id))&&(!actor||change.actor===actor)&&(change.created_at<at||change.created_at===at&&change.id<key)).sort((a,b)=>b.created_at-a.created_at||b.id.localeCompare(a.id)),items=[];let bytes=0;
   for(const change of changes){bytes+=encoder.encode(JSON.stringify(change.ops||[])).byteLength+2048;if(items.length>=limit||items.length&&bytes>8*1024**2)break;const{journalOps,audience,...item}=change,operationCount=(change.ops||[]).length+(journalOps||[]).length;if(change.user_id!==state.user.id){items.push({...item,summary:'Made private by an admin',ops:[],operationCount:1,undoAvailable:false});continue;}items.push({...item,operationCount,undoAvailable:change.undone_at===null&&change.undoable!==0&&operationCount>0&&change.created_at>=Date.now()-30*86400000});}
   const last=items.at(-1);return Response.json({items,nextCursor:items.length<changes.length&&last?`${last.created_at}.${last.id}`:null});
  }
  const single=path.match(/^\/api\/changes\/([0-9A-HJKMNP-TV-Z]{26})\/undo$/);if(request.method!=='POST'||!single&&path!=='/api/changes/undo')return null;
- const ids=single?[single[1]]:rowIds((await request.json()).ids,'Action IDs');
+ const input=request.body?await request.json():{},partial=input.skipConflicts===true;if(input.skipConflicts!==undefined&&typeof input.skipConflicts!=='boolean')throw new ApiError('validation','skipConflicts must be true or false.',400);const ids=single?[single[1]]:rowIds(input.ids,'Action IDs');
  return mutate(state=>{
   signedIn(state);const stored=state.changes as unknown as Change[],selected=ids.map(id=>stored.find(change=>change.id===id&&change.user_id===state.user.id));if(selected.some(change=>!change))throw new ApiError('not_found','An action was not found in your activity.',404);
   const changes=selected.map(change=>({...change!,ops:[...(change!.ops||[]).map(compactLegacyOp),...(change!.journalOps||[])]})),current=new Map<string,JournalRow>();
   for(const change of changes)for(const op of change.ops){const row=rows(state,op.table).find(row=>row.id===op.id);if(row)current.set(op.table+':'+op.id,{...row});}
   const admin=['owner','admin'].includes(state.user.role);if(!admin&&[...current].some(([key,row])=>!key.startsWith('artists:')&&row.owner_id!==state.user.id))throw new ApiError('forbidden','You can only undo changes to your own library.',403);
-  const plan=undoPlan(changes,current),counts:JournalWrite['counts']=[];
-  for(const op of plan.ops){const row=plan.virtual.get(op.table+':'+op.id)!;if(op.table!=='artists'&&row.owner_id!==state.user.id&&row.visibility==='public'&&(current.get(op.table+':'+op.id)!.visibility!=='public'||current.get(op.table+':'+op.id)!.deleted===1))throw new ApiError('forbidden','Admins cannot publish another member’s music.',403);
-   if(op.after.deleted!==1||op.before?.deleted===1||!['albums','artists'].includes(op.table))continue;
-   for(const[table,column]of(op.table==='albums'?[['tracks','album_id']]:[['tracks','artist_id'],['albums','artist_id']]) as ['tracks'|'albums','album_id'|'artist_id'][]){
-    const live=rows(state,table).filter(row=>!row.deleted&&row[column]===op.id);counts.push({table,column,id:op.id,count:live.length});
-    if(live.some(row=>{const final=plan.virtual.get(table+':'+row.id)||row;return !final.deleted&&final[column]===op.id;})||[...plan.virtual].some(([key,final])=>key.startsWith(table+':')&&!final.deleted&&final[column]===op.id))conflict(op.table,op.id);
-   }
-  }
-  return Response.json({...demoWriteJournal(state,{summary:ids.length===1?'Undid a library change':`Undid ${ids.length} library changes`,ops:plan.ops,guards:plan.guards,counts,undoIds:plan.changeIds,undoable:false}),undone:ids});
+  const plan=undoPlan(changes,current,Date.now(),partial),parents=new Map<string,JournalRow>();for(const dependency of undoDependencies(plan)){const row=rows(state,dependency.table).find(row=>row.id===dependency.id);if(row)parents.set(dependency.table+':'+row.id,{...row});}let counts:JournalWrite['counts'];while(true){guardUndoDependencies(plan,current,parents,partial);try{counts=demoUndoReferences(state,plan);break;}catch(error){if(!partial||!(error instanceof JournalConflict)||!retainUndoRows(plan,current,error.conflicts))throw error;}}if(plan.skipped.length&&!plan.ops.some(op=>Object.keys(op.after).some(key=>key!=='id'&&key!=='rev')))throw new JournalConflict(plan.skipped);
+  for(const op of plan.ops){const row=plan.virtual.get(op.table+':'+op.id)!;if(op.table!=='artists'&&row.owner_id!==state.user.id&&row.visibility==='public'&&(current.get(op.table+':'+op.id)!.visibility!=='public'||current.get(op.table+':'+op.id)!.deleted===1))throw new ApiError('forbidden','Admins cannot publish another member’s music.',403);}
+  return Response.json({...demoWriteJournal(state,{summary:ids.length===1?'Undid a library change':`Undid ${ids.length} library changes`,ops:plan.ops,guards:plan.guards,counts,undoIds:plan.changeIds,undoable:false,undoNote:plan.skipped.length?'Partially undone · '+plan.skipped.length+' rows kept':undefined}),undone:ids,partial:plan.skipped.length>0,skipped:plan.skipped});
  });
 }
+
+function demoUndoReferences(state:DemoState,plan:UndoPlan){const counts:NonNullable<JournalWrite['counts']>=[];for(const op of plan.ops){if(op.after.deleted!==1||op.before?.deleted===1||!['albums','artists'].includes(op.table))continue;for(const[table,column]of(op.table==='albums'?[['tracks','album_id']]:[['tracks','artist_id'],['albums','artist_id']]) as ['tracks'|'albums','album_id'|'artist_id'][]){const live=rows(state,table).filter(row=>!row.deleted&&row[column]===op.id);counts.push({table,column,id:op.id,count:live.length});if(live.some(row=>{const final=plan.virtual.get(table+':'+row.id)||row;return !final.deleted&&final[column]===op.id;})||[...plan.virtual].some(([key,final])=>key.startsWith(table+':')&&!final.deleted&&final[column]===op.id))throw new JournalConflict([{table:op.table,id:op.id}]);}}return counts;}

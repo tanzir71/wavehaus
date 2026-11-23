@@ -9,5 +9,5 @@ export interface Bucket {createMultipartUpload(key:string,options?:{httpMetadata
 export interface Env { DB:Database; MEDIA:Bucket; ASSETS:{fetch(request:Request):Promise<Response>}; APP_SECRET:string; RESET_OWNER?:string; PBKDF2_ITERATIONS?:string }
 export type User={id:string;username:string;display_name:string;password_hash:string;role:string;status:string;used_bytes:number;quota_bytes:number|null;invites_left:number;created_at:number};
 export type Session={id:string;user_id:string;device_label:string;created_at:number;last_seen_at:number;expires_at:number};
-export type Auth={user:Omit<User,'password_hash'>;session:Session};
+export type Auth={user:Omit<User,'password_hash'>;session:Session;token?:{id:string;name:string;scopes:string[]}};
 export type Settings=Record<string,unknown>;
