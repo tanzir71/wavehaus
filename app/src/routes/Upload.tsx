@@ -8,13 +8,14 @@ import { Cover } from '../ui/Cover';
 import { href } from '../ui/router';
 import { deleteBlob,idbFile } from '../../public/runtime/media.js';
 import { toast } from '../library/store';
+import { finishShare } from '../library/share';
 import './upload.css';
 const size=(bytes:number)=>bytes>=1024**3?`${(bytes/1024**3).toFixed(1)} GB`:`${(bytes/1024**2).toFixed(1)} MB`;
 export default function Upload(){
  const [visibility,setVisibility]=useState<Visibility>('private'),[publish,setPublish]=useState(false);
  const publishDialog=useRef<HTMLDialogElement>(null);
  useEffect(()=>{if(publish)publishDialog.current?.showModal();else publishDialog.current?.close();},[publish]);
- useEffect(()=>{const shared=new URLSearchParams(location.search).get('shared');if(shared)idbFile(shared).then(async files=>{if(Array.isArray(files)){await intake(files);await deleteBlob(shared);history.replaceState(null,'',href('/upload'));}}).catch(error=>toast(error.message));else void resumePending().catch(error=>toast(error.message));},[]);
+ useEffect(()=>{const shared=new URLSearchParams(location.search).get('shared');if(shared)idbFile(shared).then(async files=>{if(Array.isArray(files)){await intake(files);await deleteBlob(shared);finishShare(shared);history.replaceState(null,'',href('/upload'));}}).catch(error=>toast(error.message));else void resumePending().catch(error=>toast(error.message));},[]);
  const choose=(files:FileList|null)=>{if(files)void intake(Array.from(files),visibility).catch(error=>toast(error.message));};
  const total=uploads.value.reduce((sum,item)=>sum+item.size,0),done=uploads.value.reduce((sum,item)=>sum+item.size*item.progress,0),active=uploads.value.filter(item=>!['Done','Cancelled'].includes(item.status)&&!/skipped/i.test(item.status)),groups=new Map<string,typeof uploads.value>();
  for(const item of uploads.value){const album=item.analysis?.album;if(!album)continue;const key=album.artistName+'\0'+album.title;groups.set(key,[...groups.get(key)||[],item]);}

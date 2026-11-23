@@ -8,6 +8,7 @@ import { navigate } from './ui/router';
 import { Avatar } from './ui/Avatar';
 import { finishSignOut } from './ui/sessionActions';
 import { FileDrop } from './ui/FileDrop';
+import { captureSharedIntake,pendingShare } from './library/share';
 import { route,href } from './ui/router';
 import { Icon,IconSprite } from './ui/Icon';
 import { Cover } from './ui/Cover';
@@ -33,7 +34,8 @@ function App(){
 }
 async function serviceWorker(){if(!('serviceWorker'in navigator))return;const reg=await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`,{scope:import.meta.env.BASE_URL,type:'module'});await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise<void>(resolve=>navigator.serviceWorker.addEventListener('controllerchange',()=>resolve(),{once:true}));if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});}
 const root=document.getElementById('app')!;root.textContent='';render(<App/>,root);
-serviceWorker().then(bootLibrary).then(async()=>{if(authStatus.value==='setup'&&route.value!=='/setup/reset')navigate('/setup');else if(authStatus.value==='signedOut'&&!/^\/(sign-in|pair|join|setup\/reset)(\/|$)/.test(route.value))navigate('/sign-in');if(user.value){configureUser(user.value.id);await restore(library.value.tracks);}}).catch(e=>{busy.value=false;document.body.dataset.busy='false';toast(e.message);});
+captureSharedIntake();
+serviceWorker().then(bootLibrary).then(async()=>{if(authStatus.value==='setup'&&route.value!=='/setup/reset')navigate('/setup');else if(authStatus.value==='signedOut'&&!/^\/(sign-in|pair|join|setup\/reset)(\/|$)/.test(route.value))navigate('/sign-in');if(user.value){configureUser(user.value.id);await restore(library.value.tracks);const shared=pendingShare();if(shared)navigate(`/upload?shared=${encodeURIComponent(shared)}`);}}).catch(e=>{busy.value=false;document.body.dataset.busy='false';toast(e.message);});
 addEventListener('wh-unauthenticated',()=>{if(authStatus.value==='signedIn')finishSignOut();});
 if('BroadcastChannel'in window){const channel=new BroadcastChannel('wh-session');channel.onmessage=event=>{if(event.data==='signedOut'&&authStatus.value==='signedIn')finishSignOut(false);};}
 addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes((e.target as Element).tagName)){e.preventDefault();location.assign(href('/search'));}});

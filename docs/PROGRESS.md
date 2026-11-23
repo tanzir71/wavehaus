@@ -54,5 +54,5 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 - Both HTTP backends passed browser tag/artwork/lyrics and second-session sync checks, plus a 300 MiB throttled reload/resume test with exact SHA and no confirmed-chunk retransmission.
 - Six-format folder import and duplicate override passed on Android and desktop Pages emulation. The share-target handler passed simulated POST intake; physical OS sharing is unverified.
 - Fresh/upgraded/legacy SQLite and D1 schemas match, with preserved data and foreign keys. Both release archives passed safe overwrite checks.
-- Home, Now Playing, Upload, sign-in and Settings accessibility measured 100. Initial JS including static imports is 54.3 KiB gzip in demo and 43.0 KiB in production.
+- Home, Now Playing, Upload, sign-in and Settings accessibility measured 100. Initial JS including static imports is about 55 KiB gzip in demo and 44 KiB in production.
 - Details and boundaries: [M2 verification](m2-verification.md).
