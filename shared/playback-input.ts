@@ -1,7 +1,6 @@
 import { UploadError,text } from './upload-input';
-import type { SavedQueue,QueueSource } from '../app/src/engine/queue';
-export type PlayerSnapshot={queue:string[];index:number;positionMs:number;shuffle:boolean;repeat:'off'|'all'|'one';autoplay:boolean;updatedAt:number;sections?:SavedQueue};
-export type PlayInput={id?:string;trackId:string;startedAt:number;msPlayed:number;completed:boolean;skipped:boolean;context:string|null;deviceLabel:string|null};
+import type { QueueSource,PlayerSnapshot,PlayInput } from './player-types';
+export type { PlayerSnapshot,PlayInput } from './player-types';
 const ulid=/^[0-9A-HJKMNP-TV-Z]{26}$/;
 function invalid(message:string):never{throw new UploadError('validation',message);}
 function integer(value:unknown,label:string,max:number,min=0){if(!Number.isSafeInteger(value)||Number(value)<min||Number(value)>max)invalid(`${label} is invalid.`);return Number(value);}

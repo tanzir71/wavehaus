@@ -1,9 +1,8 @@
 import type { Track } from '../api/types';
 
-export type RepeatMode='off'|'all'|'one';
-export type QueueSource='context'|'queue'|'autoplay';
+import type { RepeatMode,QueueSource,SavedQueue } from '../../../shared/player-types';
+export type { RepeatMode,QueueSource,SavedQueue } from '../../../shared/player-types';
 export interface QueueEntry {key:string;track:Track;source:QueueSource;reason?:string}
-export interface SavedQueue {context:string[];remaining:string[];manual:string[];automatic:string[];history:{id:string;source:QueueSource}[];current:string|null;currentSource:QueueSource;contextLabel:string;contextType:string;shuffle:boolean;repeat:RepeatMode;autoplay:boolean}
 
 export function seededRandom(seed:number){let n=seed>>>0;return()=>{n+=0x6d2b79f5;let t=n;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
 export function shuffleTracks<T extends {artist_name:string}>(tracks:T[],seed:number,previousArtist=''){

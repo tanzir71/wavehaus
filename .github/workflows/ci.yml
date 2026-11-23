@@ -29,11 +29,18 @@ jobs:
           extensions: pdo_sqlite, mbstring, openssl, fileinfo
           coverage: none
       - run: npm run build
+      - run: npm run test:media-offload
       - run: npm run test:migrations
       - run: npm run test:migrations:worker
       - run: npm run test:php
         env:
           RUN_LARGE_UPLOAD: '1'
+      - name: Install optional Apache offload test server
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends apache2 libapache2-mod-xsendfile
+      - name: Test authenticated Apache X-Sendfile ranges
+        run: npm run test:php
+        env:
+          TEST_APACHE_OFFLOAD: '1'
       - run: npm run test:worker
         env:
           RUN_LARGE_UPLOAD: '1'

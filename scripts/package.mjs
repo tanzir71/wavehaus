@@ -20,7 +20,7 @@ await mkdir('dist',{recursive:true});
 const app=await files('app/dist','app/'),migrations=await files('migrations','migrations/');
 await zip(`wavehaus-shared-hosting-v${version}.zip`,[
  ...await files('server-php/public'),...await files('server-php/lib','lib/'),...migrations,...app,
- {name:'VERSION',data:version},{name:'README.txt',data:await readFile('server-php/README.md')},{name:'LICENSE',data:await readFile('LICENSE')}
+ {name:'VERSION',data:version},{name:'README.txt',data:await readFile('server-php/README.md')},{name:'MEDIA-OFFLOAD.md',data:await readFile('docs/media-offload.md')},{name:'LICENSE',data:await readFile('LICENSE')}
 ]);
 const worker=await files('server-worker/src','server-worker/src/');
 for(const name of ['package.json','package-lock.json','wrangler.toml','tsconfig.json'])worker.push({name:'server-worker/'+name,data:await readFile('server-worker/'+name)});

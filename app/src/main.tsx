@@ -14,11 +14,13 @@ import { route,href } from './ui/router';
 import { Icon,IconSprite } from './ui/Icon';
 import { Cover } from './ui/Cover';
 import { Player } from './ui/Player';
-import { Home,Library,Search,Collection,NowPlaying,Queue,Settings } from './routes/Core';
+import { Home,Library,Search,Collection,Settings } from './routes/Core';
+import { NowPlaying,Queue } from './routes/Playback';
 import { BackgroundPlay } from './routes/BackgroundPlay';
 import logo from '../../handover/assets/brand/wavehaus-mark.svg?raw';
 import './ui/tokens.css';
 import './ui/app.css';
+import './ui/playback.css';
 const Upload=lazy(()=>import('./routes/Upload'));
 const Auth=lazy(()=>import('./routes/Auth').then(module=>({default:module.AuthScreen})));
 const nav=[['Home','home','/'],['Search','search','/search'],['Your library','library','/library'],['Settings','settings','/settings']] as const;
@@ -31,7 +33,7 @@ function App(){
  const message=notice.value||engineError.value;
  if(busy.value)return <><IconSprite/><main id="main"><div class="loading" role="status"><span class="loading-mark">∿</span><h1>{api.demo?'Preparing demo library…':'Opening Wavehaus…'}</h1><p>{api.demo?'Making a little original music. Everything stays here.':'Your music, at home.'}</p></div></main></>;
  if(authentication)return <><IconSprite/>{api.demo&&<div class="demo-banner">Demo mode: everything stays in this browser.</div>}<Boundary><Suspense fallback={<p class="loading" role="status">Opening…</p>}>{authStatus.value==='loading'?<main class="empty"><h1>Could not open Wavehaus.</h1><p>{message}</p><button class="button" onClick={()=>location.reload()}>Try again</button></main>:<Auth key={route.value} path={route.value}/>}</Suspense></Boundary>{message&&<div class="toast" role="status">{message}</div>}</>;
- return <><IconSprite/><a class="skip-link" href="#main">Skip to content</a><FileDrop/><Sidebar/><div class="app-body">{api.demo&&<div class="demo-banner">Demo mode: everything stays in this browser.</div>}<div class="topbar"><div class="topbar-history"><button class="icon-button" aria-label="Go back" onClick={()=>history.back()}><Icon name="chevron-left"/></button><button class="icon-button" aria-label="Go forward" onClick={()=>history.forward()}><Icon name="chevron-right"/></button></div><a class="top-search" href={href('/search')}><Icon name="search" size={18}/><span>Search songs, albums, folders, moments</span><kbd>/</kbd></a><Avatar/></div><main id="main" tabIndex={-1} class={route.value==='/now-playing'?'now-route':''}><Boundary><Suspense fallback={<p role="status">Opening…</p>}><CurrentRoute/></Suspense></Boundary></main></div><Player/><MobileNav/>{message&&<div class="toast" role="status">{message}</div>}</>;
+ return <><IconSprite/><a class="skip-link" href="#main">Skip to content</a><FileDrop/><Sidebar/><div class="app-body">{api.demo&&<div class="demo-banner">Demo mode: everything stays in this browser.</div>}<div class="topbar"><div class="topbar-history"><button class="icon-button" aria-label="Go back" onClick={()=>history.back()}><Icon name="chevron-left"/></button><button class="icon-button" aria-label="Go forward" onClick={()=>history.forward()}><Icon name="chevron-right"/></button></div><a class="top-search" href={href('/search')}><Icon name="search" size={18}/><span>Search songs, albums, folders, moments</span><kbd>/</kbd></a><Avatar/></div><main id="main" tabIndex={-1} class={route.value==='/now-playing'?'now-route':route.value==='/queue'?'queue-route':''}><Boundary><Suspense fallback={<p role="status">Opening…</p>}><CurrentRoute/></Suspense></Boundary></main></div><Player/><MobileNav/>{message&&<div class="toast" role="status">{message}</div>}</>;
 }
 async function serviceWorker(){if(!('serviceWorker'in navigator))return;const reg=await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`,{scope:import.meta.env.BASE_URL,type:'module'});await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise<void>(resolve=>navigator.serviceWorker.addEventListener('controllerchange',()=>resolve(),{once:true}));if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});}
 const root=document.getElementById('app')!;root.textContent='';render(<App/>,root);

@@ -111,10 +111,10 @@ export class AudioEngine {
  }
  resume(){
   if(!this.current)return;this.options.media.prepare();this.wanted=true;this.interrupted=false;this.error='';this.retries=0;this.cancelRecovery();
-  if(this.options.audio.ended)this.seek(0);this.ensureSession();this.state='loading';this.attempt();this.changed();
+  if(this.options.audio.ended)this.seek(0);this.ensureSession();this.state='loading';this.attempt();this.prepareNext();this.changed();
  }
  pause(){
-  this.account();this.wanted=false;this.interrupted=false;this.generation++;this.cancelRecovery();this.options.audio.pause();this.state='paused';this.persist(true);this.publishPosition();this.changed();
+  this.account();this.wanted=false;this.interrupted=false;this.generation++;this.cancelRecovery();this.options.warm?.(null);this.options.audio.pause();this.state='paused';this.persist(true);this.publishPosition();this.changed();
  }
  stop(){this.pause();this.seek(0);}
  seek(ms:number,fast=false){
@@ -178,7 +178,7 @@ export class AudioEngine {
  private cancelRecovery(){this.clearStall();clearTimeout(this.recovery);this.recovery=undefined;}
  private failed(){if(!this.wanted)return;const code=this.options.audio.error?.code;if(!code)return;if(code===2)this.recover();else if(code===3||code===4)this.unsupportedCurrent();else{this.wanted=false;this.state='error';this.error='Playback stopped. Tap Play to try again.';this.changed();}}
  private unsupportedCurrent(){
-  const track=this.current;if(!track)return;this.unsupported.add(track.id);this.error=`${track.title} can’t play on this device.`;this.next('unsupported');
+  const track=this.current;if(!track)return;this.unsupported.add(track.id);this.queueRevision++;this.error=`${track.title} can’t play on this device.`;this.next('unsupported');
  }
  private recover(immediate=false){
   if(!this.wanted||!this.current)return;this.cancelRecovery();this.account();const at=this.options.audio.currentTime*1000,url=this.urls.get(this.current.id)!,generation=this.generation;
@@ -214,7 +214,7 @@ export class AudioEngine {
     const candidates=[...this.catalog.values()].filter(t=>!excluded.has(t.id));const next=shuffleTracks(candidates,this.now()>>>0,this.current.artist_name).slice(0,10-this.queue.automatic.length);
     if(next.length){this.queue.addAutomatic(next,'From your library');this.queueRevision++;this.persist(false);this.changed();}
    }
-   this.options.warm?.(this.queue.upcoming[0]?this.urls.get(this.queue.upcoming[0].track.id)||null:null);
+   this.options.warm?.(this.wanted&&this.queue.upcoming[0]?this.urls.get(this.queue.upcoming[0].track.id)||null:null);
   });
  }
  snapshot():PlayerSnapshot{const timeline=this.queue.timeline;return {queue:timeline.map(e=>e.track.id),index:Math.max(0,timeline.findIndex(e=>e.key===this.queue.current?.key)),positionMs:Math.max(0,Math.round(this.positionMs)),shuffle:this.queue.shuffle,repeat:this.queue.repeat,autoplay:this.queue.autoplay,updatedAt:this.now(),sections:this.queue.save()};}
@@ -225,7 +225,7 @@ export class AudioEngine {
  sleep(minutes:number|'endOfTrack'|null){
   clearTimeout(this.sleeper);this.sleepUntil=null;this.sleepTrack=null;
   if(minutes==='endOfTrack')this.sleepTrack=this.queue.current?.key||null;
-  else if(minutes!==null&&Number.isFinite(minutes)&&minutes>0){this.sleepUntil=this.now()+minutes*60000;this.scheduleSleep();}
+  else if(minutes!==null&&Number.isFinite(minutes)&&minutes>0&&minutes<=1440){this.sleepUntil=this.now()+minutes*60000;this.scheduleSleep();}
   this.fade();this.changed();
  }
  private scheduleSleep(){if(this.sleepUntil===null)return;const left=this.sleepUntil-this.now();if(left<=0){this.expireSleep();return;}this.fade();this.sleeper=setTimeout(()=>this.scheduleSleep(),left>10000?left-10000:Math.min(250,left));}

@@ -1,6 +1,6 @@
-# Wavehaus shared hosting — M2
+# Wavehaus shared hosting — M3
 
-Owner setup, sign-in, recovery, device pairing, settings, resumable uploads, artwork, library sync and authenticated streaming are implemented. Playback hardening continues in M3. The Pages demo uses its own browser-local backend.
+Owner setup, sign-in, recovery, device pairing, settings, resumable uploads, artwork, library sync and authenticated streaming are implemented. M3 adds playback persistence and listening history. The Pages demo uses its own browser-local backend.
 
 1. In cPanel create a subdomain, with PHP 8.1+ and the pdo_sqlite, mbstring, openssl and fileinfo extensions enabled.
 2. Upload and extract the shared-hosting zip into that domain's document root. Enable HTTPS. Apache/LiteSpeed must honour the included `.htaccess`.
@@ -19,3 +19,9 @@ Recovery: use one saved code with your username on the sign-in screen. If all co
 Do not serve the site using a static-only host or ignore `.htaccess`. Test that `/lib/bootstrap.php`, `/migrations/0001_init.sql`, `/data-*/config.php` and dotfiles return 403/404 before adding personal music.
 
 No Composer, Node, shell access or external auth service is required on the host. The zip includes the built PWA.
+
+The normal PHP media streamer works without optional modules. Hosts with Apache
+`mod_xsendfile` or a protected LiteSpeed context can opt into server offloading;
+see [media offload configuration](https://github.com/tanzir71/wavehaus/blob/main/docs/media-offload.md)
+(also included as `MEDIA-OFFLOAD.md` in the zip). Do not enable its
+private config flags before configuring and checking the host's media mapping.
