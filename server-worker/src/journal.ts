@@ -40,7 +40,7 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
   const key=guard.table+':'+guard.column,group=countGroups.get(key)||[];group.push(guard);countGroups.set(key,group);
  }
  for(const group of countGroups.values()){const first=group[0];conditions.push(`NOT EXISTS(SELECT 1 FROM json_each(?) g WHERE (SELECT COUNT(*) FROM ${first.table} r WHERE r.${first.column}=json_extract(g.value,'$.id') AND r.deleted=0)<>json_extract(g.value,'$.count'))`);parameters.push(JSON.stringify(group.map(({id,count})=>({id,count}))));}
- if(plan.appendTo){conditions.push('EXISTS(SELECT 1 FROM changes WHERE id=? AND user_id=u.id AND undone_at IS NULL AND undoable=1 AND created_at>=?)');parameters.push(plan.appendTo,now-30*86400000);}
+ if(plan.appendTo){conditions.push('EXISTS(SELECT 1 FROM changes c WHERE c.id=? AND c.user_id=u.id AND c.undone_at IS NULL AND c.undoable=1 AND c.created_at>=? AND json_array_length(c.ops)+(SELECT COUNT(*) FROM change_ops o WHERE o.change_id=c.id)+?<=10000 AND length(CAST(c.ops AS BLOB))+(SELECT COALESCE(SUM(COALESCE(length(CAST(o.before_json AS BLOB)),0)+length(CAST(o.after_json AS BLOB))),0) FROM change_ops o WHERE o.change_id=c.id)+?<=16777216)');parameters.push(plan.appendTo,now-30*86400000,plan.ops.length,journalBytes+32*plan.ops.length);}
  if(plan.undoIds?.length){conditions.push('(SELECT COUNT(*) FROM changes WHERE id IN(SELECT value FROM json_each(?)) AND user_id=u.id AND undone_at IS NULL AND undoable=1 AND created_at>=?)=?');parameters.push(JSON.stringify(plan.undoIds),now-30*86400000,plan.undoIds.length);}
  const statements:Statement[]=[stmt(env.DB,`INSERT INTO mutation_guards(id) SELECT ? FROM users u WHERE ${conditions.join(' AND ')}`,gate,...parameters)];
  if(!plan.appendTo)statements.push(stmt(env.DB,`INSERT INTO changes(id,user_id,actor,session_label,summary,ops,created_at,undoable) SELECT ?,?,'web',?,?,'[]',?,? WHERE ${guardExists}`,changeId,auth.user.id,auth.session.device_label,plan.summary,now,plan.undoable===false?0:1,gate));
@@ -60,6 +60,7 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
    }else{
     const setters=columns.map(column=>`${quote(column)}=CASE WHEN json_type(j.value,'$.patch.${column}') IS NOT NULL THEN json_extract(j.value,'$.patch.${column}') ELSE r.${quote(column)} END`);
     setters.push('rev='+revision("json_extract(j.value,'$.index')"));if(table==='tracks')setters.push('updated_at='+now);
+    if(table!=='artists')setters.push(`hidden_rev=CASE WHEN r.visibility='public' AND CASE WHEN json_type(j.value,'$.patch.visibility') IS NOT NULL THEN json_extract(j.value,'$.patch.visibility') ELSE r.visibility END='private' THEN ${revision("json_extract(j.value,'$.index')")} ELSE r.hidden_rev END`);
     statements.push(stmt(env.DB,`UPDATE ${table} AS r SET ${setters.join(',')} FROM json_each(?) j WHERE r.id=json_extract(j.value,'$.id') AND ${guardExists}`,JSON.stringify(payload),gate));
    }
   }

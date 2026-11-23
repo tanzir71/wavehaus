@@ -14,7 +14,7 @@ try{
   if(upgrade){await configure(m1);apply();command(['d1','execute','wavehaus','--local','--persist-to',persist,'--file',resolve('tests/fixtures/migrations-m1.sql'),'--json']);}
   await configure(resolve('migrations'));apply();apply();
   const columns=sql(`SELECT m.name AS table_name,p.* FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE ${tableFilter} ORDER BY m.name,p.cid`),foreignKeys=sql(`SELECT m.name AS table_name,p.* FROM sqlite_master m JOIN pragma_foreign_key_list(m.name) p WHERE ${tableFilter} ORDER BY m.name,p.id,p.seq`),shape={columns,foreignKeys};
-  if(!fresh)fresh=shape;assert.deepEqual(shape,fresh);assert(!columns.some(c=>['showcase','showcase_stats'].includes(c.table_name)||c.name==='allow_homepage'));assert.equal(sql('SELECT COUNT(*) AS n FROM schema_migrations')[0].n,5);assert.deepEqual(sql('PRAGMA foreign_key_check'),[]);assert.equal(sql("SELECT COUNT(*) AS n FROM settings WHERE key='homepage'")[0].n,0);
+  if(!fresh)fresh=shape;assert.deepEqual(shape,fresh);assert(!columns.some(c=>['showcase','showcase_stats'].includes(c.table_name)||c.name==='allow_homepage'));assert.equal(sql('SELECT COUNT(*) AS n FROM schema_migrations')[0].n,6);assert.deepEqual(sql('PRAGMA foreign_key_check'),[]);assert.equal(sql("SELECT COUNT(*) AS n FROM settings WHERE key='homepage'")[0].n,0);
   if(upgrade){assert.equal(sql('SELECT title FROM tracks')[0].title,'Preserved track');assert.equal(sql('SELECT title FROM albums')[0].title,'Preserved album');assert.equal(sql("SELECT value FROM settings WHERE key='server_name'")[0].value,'"Preserved settings"');}
  }
  console.log('Local D1 fresh and M1-upgraded schemas match; data and foreign keys survive, removed visitor tables stay absent, and repeated migration is idempotent.');

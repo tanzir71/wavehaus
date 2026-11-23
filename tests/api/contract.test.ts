@@ -19,7 +19,7 @@ beforeAll(async()=>{
 });
 afterAll(async()=>{if(demo)await stopDemo();});
 describe('shared API and auth contract',()=>{
- it('reports version, schema and setup state',async()=>{const r=await owner.request('/api/health');expect(r.status).toBe(200);expect(r.body).toMatchObject({ok:true,schema:5,needsSetup:false});if(process.env.TEST_BACKEND)expect(r.body.backend).toBe(process.env.TEST_BACKEND);else expect(demo?['demo']:['php','worker']).toContain(r.body.backend);});
+ it('reports version, schema and setup state',async()=>{const r=await owner.request('/api/health');expect(r.status).toBe(200);expect(r.body).toMatchObject({ok:true,schema:6,needsSetup:false});if(process.env.TEST_BACKEND)expect(r.body.backend).toBe(process.env.TEST_BACKEND);else expect(demo?['demo']:['php','worker']).toContain(r.body.backend);});
  it('keeps setup locked, including after competing setup requests',async()=>{expect((await owner.request('/api/setup','POST',{username,password,deviceLabel:'Another setup'})).status).toBe(404);if(!demo)expect(setupStatuses.length===0||setupStatuses.join(',')==='201,404').toBe(true);});
  it('advertises private defaults, limits and closed registration',async()=>{const r=await owner.request('/api/config');expect(r.status).toBe(200);expect(r.body.maxChunkBytes).toBeGreaterThan(0);expect(r.body.maxFileBytes).toBeGreaterThan(r.body.maxChunkBytes);expect(r.body.features.uploads).toBe(true);expect(r.body.registrationMode).toBe('closed');expect((await owner.request('/api/auth/me')).body.settings.default_visibility).toBe('private');});
  it('requires the CSRF header on mutations',async()=>{const r=await owner.request('/api/auth/pair','POST',{},false);expect(r.status).toBe(403);expect(r.body.error.code).toBe('csrf');});
@@ -66,6 +66,22 @@ describe('shared API and auth contract',()=>{
   const files=await Promise.all([600,96].map(async size=>({name:'art'+size,filename:size+'.webp',mime:'image/webp',bytes:await sharp({create:{width:size,height:size,channels:3,background:'#0f2a2c'}}).webp().toBuffer()})));expect((await owner.form(path,files,'embedded')).body.artSource).toBe('embedded');
   for(const size of [600,96]){const image=await owner.raw('/art/'+uploaded.album.id+'/'+size+'.webp');expect(image.status).toBe(200);expect(image.headers['content-type']).toBe('image/webp');expect(image.headers['cache-control']).toContain('private');expect(String.fromCharCode(...image.bytes.slice(8,12))).toBe('WEBP');}
   const delta=(await owner.request('/api/library?since='+before)).body;expect(delta.items.albums.find((a:any)=>a.id===uploaded.album.id)).toMatchObject({art_source:'embedded'});expect(delta.rev).toBeGreaterThan(before);
+ });
+ it('previews metadata, applies one guarded action and restores edits and deletion through Undo',async()=>{
+  const before=(await owner.request('/api/library?since=0')).body.items.tracks.find((row:any)=>row.id===uploaded.track.id),body={ids:[before.id],set:{title:'Edited fixture',artist:'Different artist',albumArtist:'Different artist',album:'Edited album',year:2025,genre:'Ambient',trackNo:8,discNo:2},expectedRevs:{[before.id]:before.rev}};
+  const preview=await owner.request('/api/tracks','PATCH',{...body,dryRun:true});expect(preview.status).toBe(200);expect(preview.body.updated).toBe(1);expect((await owner.request('/api/library?since=0')).body.items.tracks.find((row:any)=>row.id===before.id)).toEqual(before);
+  expect((await owner.request('/api/tracks','PATCH',{...body,set:[],perId:{[before.id]:{title:'Reject this array'}}})).status).toBe(400);expect((await owner.request('/api/tracks','PATCH',body,false)).status).toBe(403);
+  const applied=await owner.request('/api/tracks','PATCH',body);expect(applied.status).toBe(200);expect(applied.body.updated).toBe(1);expect((await owner.request('/api/tracks','PATCH',body)).status).toBe(409);expect((await owner.request('/api/changes/'+applied.body.changeId+'/undo','POST',{})).status).toBe(200);
+  const restored=(await owner.request('/api/library?since=0')).body.items.tracks.find((row:any)=>row.id===before.id);expect({...restored,rev:before.rev,updated_at:before.updated_at}).toEqual(before);
+  const deleted=await owner.request('/api/tracks','DELETE',{ids:[before.id],expectedRevs:{[before.id]:restored.rev}});expect(deleted.status).toBe(200);expect((await owner.raw('/media/'+before.id)).status).toBe(404);expect((await owner.request('/api/changes/'+deleted.body.changeId+'/undo','POST',{})).status).toBe(200);expect((await owner.raw('/media/'+before.id,'GET',{Range:'bytes=0-15'})).status).toBe(206);
+ });
+ it('groups separate imports by a stable import key without changing their album identity',async()=>{
+  const results:any[]=[];for(let i=0;i<5;i++){
+   const bytes=wav(new Float32Array(256).fill(.05+i*.02)),sha256=createHash('sha256').update(bytes).digest('hex'),start=await owner.request('/api/uploads','POST',{filename:'Separate '+i+'.wav',size:bytes.length,sha256});expect(start.status).toBe(201);expect((await owner.binary('/api/uploads/'+start.body.uploadId+'/parts/1',bytes)).status).toBe(200);
+   const done=await owner.request('/api/uploads/'+start.body.uploadId+'/complete','POST',{metadata:{title:'Separate '+i,artist:'Import artist',durationMs:16},album:{title:'Separate album',artistName:'Import Artist',...i<2?{}:{importKey:(i===4?'b':'a').repeat(64)}},visibility:'private'});expect(done.status).toBe(200);results.push(done.body);
+  }
+  expect(results[0].album.id).toBe(results[1].album.id);expect(results[2].album.id).toBe(results[3].album.id);expect(new Set(results.map(row=>row.album.id)).size).toBe(3);expect(new Set(results.map(row=>row.album.identity_key)).size).toBe(1);expect(results.every(row=>row.album.artist_name==='Import Artist')).toBe(true);
+  expect((await owner.request('/api/changes/undo','POST',{ids:results.map(row=>row.changeId)})).status).toBe(200);for(const row of results)expect((await owner.raw('/media/'+row.track.id)).status).toBe(404);
  });
  it('rejects forged full hashes and unsupported magic without adding rows or charging quota',async()=>{
   const before=(await owner.request('/api/library?since=0')).body.rev,used=(await owner.request('/api/auth/me')).body.user.used_bytes,valid=wav(new Float32Array(16000).fill(.02));

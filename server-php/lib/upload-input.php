@@ -58,7 +58,8 @@ function completion_input(array $input): array {
     ];
     if($metadata['quickHash']&&!preg_match('/^[a-f0-9]{64}$/D',$metadata['quickHash']))fail('invalid_hash','Invalid quick hash.');
     $existing=input_text($a['existingAlbumId']??null,'Album ID',26);if($existing&&!preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/D',$existing))fail('validation','Invalid album ID.');
-    return ['metadata'=>$metadata,'album'=>['title'=>$metadata['album'],'artistName'=>input_text($a['artistName']??null,'Album artist',200)??$albumArtist,'year'=>input_number($a['year']??$m['year']??null,'Year',2999,true,1),'folderPath'=>input_path($a['folderPath']??null),'existingAlbumId'=>$existing],'visibility'=>$visibility,'peaks'=>input_peaks($input['peaks']??null)];
+    $importKey=input_text($a['importKey']??null,'Import key',64);if($importKey&&!preg_match('/^[a-f0-9]{64}$/D',$importKey))fail('validation','Invalid import key.');
+    return ['metadata'=>$metadata,'album'=>['title'=>$metadata['album'],'artistName'=>input_text($a['artistName']??null,'Album artist',200)??$albumArtist,'year'=>input_number($a['year']??$m['year']??null,'Year',2999,true,1),'folderPath'=>input_path($a['folderPath']??null),'existingAlbumId'=>$existing,'importKey'=>$importKey],'visibility'=>$visibility,'peaks'=>input_peaks($input['peaks']??null)];
 }
 function normalized_name(string $value): string { return preg_replace('/\s+/u',' ',trim(mb_strtolower($value,'UTF-8'))); }
 function album_merge_key(string $artist,string $title): string { return hash('sha256',normalized_name($artist)."\x1f".normalized_name($title)); }

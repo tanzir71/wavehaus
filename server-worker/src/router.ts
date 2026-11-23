@@ -8,7 +8,8 @@ import { uploadsRoutes } from './uploads';
 import { artworkRoutes } from './art';
 import { playbackRoutes } from './playback';
 import { journalRoutes } from './journal-routes';
-export const VERSION='0.4.0',SCHEMA=5;
+import { metadataRoutes } from './metadata';
+export const VERSION='0.4.0',SCHEMA=6;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
  if(path==='/api/health'&&method==='GET')return json({ok:true,version:VERSION,schema:SCHEMA,backend:'worker',needsSetup:!await one(env.DB,'SELECT id FROM users LIMIT 1')});
@@ -16,6 +17,7 @@ export async function apiRoute(request:Request,env:Env,path=new URL(request.url)
  const result=await authRoutes(request,env,path);if(result)return result;
  const auth=(await currentAuth(request,env))!;
  const journal=await journalRoutes(request,env,auth,path);if(journal)return journal;
+ const metadata=await metadataRoutes(request,env,auth,path);if(metadata)return metadata;
  const uploaded=await uploadsRoutes(request,env,auth,path);if(uploaded)return uploaded;
  const artwork=await artworkRoutes(request,env,auth,path);if(artwork)return artwork;
  const library=await libraryRoutes(request,env,auth,path);if(library)return library;

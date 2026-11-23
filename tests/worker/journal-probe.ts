@@ -3,6 +3,9 @@
 import {writeJournal,type JournalWrite} from '../../server-worker/src/journal';
 import {readJournalChanges,readJournalRows} from '../../server-worker/src/journal-read';
 import {journalRoutes} from '../../server-worker/src/journal-routes';
+import {metadataRoutes} from '../../server-worker/src/metadata';
+import {artworkRoutes} from '../../server-worker/src/art';
+import {libraryRoutes} from '../../server-worker/src/library';
 import {all,one,run,stmt} from '../../server-worker/src/db';
 import {ulid} from '../../server-worker/src/crypto';
 import type {Env,Auth,User} from '../../server-worker/src/types';
@@ -10,8 +13,8 @@ import type {JournalRow} from '../../shared/journal';
 import {UploadError} from '../../shared/upload-input';
 const owner='01J'+'0'.repeat(19)+'9000';
 async function state(env:Env){return {
- tracks:await all<JournalRow>(env.DB,'SELECT id,owner_id,album_id,artist_id,title,rev,deleted FROM tracks ORDER BY id'),
- albums:await all<JournalRow>(env.DB,'SELECT id,owner_id,title,art_key,rev,deleted FROM albums ORDER BY id'),
+ tracks:await all<JournalRow>(env.DB,'SELECT id,owner_id,album_id,artist_id,title,artist_name,album_artist,album_title,year,genre,track_no,disc_no,visibility,hidden_rev,rev,deleted FROM tracks ORDER BY id'),
+ albums:await all<JournalRow>(env.DB,'SELECT id,owner_id,title,artist_name,visibility,sync_visibility,art_key,art_source,rev,deleted FROM albums ORDER BY id'),
  changes:await all(env.DB,'SELECT id,summary,undoable,undone_at FROM changes ORDER BY created_at,id'),
  guardCount:(await one<{n:number}>(env.DB,'SELECT COUNT(*) AS n FROM mutation_guards'))!.n,
  operationCount:(await one<{n:number}>(env.DB,'SELECT COUNT(*) AS n FROM change_ops'))!.n,
@@ -19,10 +22,13 @@ async function state(env:Env){return {
 };}
 export default {async fetch(request:Request,env:Env){try{
  const path=new URL(request.url).pathname;if(path==='/_ready')return Response.json({ok:true});if(path==='/state')return Response.json(await state(env));
- const input=(request.method==='GET'?{}:await request.json()) as JournalWrite&{changeIds:string[];actor?:string;rowId?:string;mode?:string};
- const user=await one<User>(env.DB,'SELECT * FROM users WHERE id=?',input.actor||owner);if(!user)return new Response(null,{status:401});
+ const input=(request.method==='GET'||!request.headers.get('Content-Type')?.includes('application/json')?{}:await request.clone().json()) as JournalWrite&{changeIds:string[];actor?:string;rowId?:string;mode?:string};
+ const user=await one<User>(env.DB,'SELECT * FROM users WHERE id=?',input.actor||new URL(request.url).searchParams.get('actor')||owner);if(!user)return new Response(null,{status:401});
  const auth={user,session:{device_label:'Journal integration'}} as Auth;
  if(path.startsWith('/api/changes'))return await journalRoutes(request,env,auth,path)||new Response(null,{status:404});
+ if(path==='/api/tracks')return await metadataRoutes(request,env,auth,path)||new Response(null,{status:404});
+ if(path==='/api/library')return await libraryRoutes(request,env,auth,path)||new Response(null,{status:404});
+ if(path.includes('/art'))return await artworkRoutes(request,env,auth,path)||new Response(null,{status:404});
  if(path==='/same-time'){await run(env.DB,'UPDATE changes SET created_at=?',Date.now());return Response.json({ok:true});}
  if(path==='/apply')return Response.json(await writeJournal(env,auth,input));
  if(path==='/legacy'){

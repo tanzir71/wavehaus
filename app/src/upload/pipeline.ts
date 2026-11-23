@@ -57,7 +57,7 @@ function processQueue(){
 }
 function analyse<T>(file:File,path:string,signal:AbortSignal,quickOnly=false,onProgress?:(progress:number)=>void){return new Promise<T>((resolve,reject)=>{
  const worker=new Worker(new URL('./analyse.worker.ts',import.meta.url),{type:'module'}),close=()=>{worker.terminate();signal.removeEventListener('abort',abort);},abort=()=>{close();reject(aborted());};
- worker.onmessage=event=>{if('progress'in event.data){onProgress?.(event.data.progress);return;}close();if(event.data.ok)resolve(event.data.result);else reject(new ApiError(event.data.error.code||'analysis',event.data.error.message,event.data.error.status||400));};worker.onerror=()=>{close();reject(new Error('Could not load the upload tools. Connect once, then retry.'));};signal.addEventListener('abort',abort,{once:true});if(signal.aborted){abort();return;}worker.postMessage({file,path,quickOnly});
+ worker.onmessage=event=>{if('progress'in event.data){onProgress?.(event.data.progress);return;}close();if(event.data.ok)resolve(event.data.result);else reject(new ApiError(event.data.error.code||'analysis',event.data.error.message,event.data.error.status||400));};worker.onerror=()=>{close();reject(new Error('Could not load the upload tools. Connect once, then retry.'));};signal.addEventListener('abort',abort,{once:true});if(signal.aborted){abort();return;}worker.postMessage({file,path,quickOnly,rules:accountSettings.value.library_rules});
  });}
 async function peaks(file:File,analysis:Analysis,signal:AbortSignal){
  const nav=navigator as Navigator&{deviceMemory?:number;connection?:{saveData?:boolean}},estimated=analysis.metadata.durationMs/1000*(analysis.metadata.sampleRate||48000)*(analysis.metadata.channels||2)*4;

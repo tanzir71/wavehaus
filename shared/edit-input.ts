@@ -19,11 +19,12 @@ export function metadataPatch(value:unknown):MetadataPatch {
 }
 function flag(input:Record<string,unknown>,key:string){if(input[key]!==undefined&&typeof input[key]!=='boolean')reject(`${key} must be true or false.`);return input[key]===true;}
 export function editInput(input:Record<string,unknown>){
- const ids=rowIds(input.ids),set=input.set===undefined?{}:metadataPatch(input.set),perId:Record<string,MetadataPatch>=Object.create(null),expectedRevs:Record<string,number>=Object.create(null);
+ const ids=rowIds(input.ids),set=input.set===undefined?{}:metadataPatch(input.set),perId:Record<string,MetadataPatch>=Object.create(null),expectedRevs:Record<string,number>=Object.create(null),expectedAlbumRevs:Record<string,number>=Object.create(null);
  if(input.perId!==undefined)for(const[id,patch]of Object.entries(object(input.perId,'Per-track fields'))){if(!ids.includes(id))reject('Per-track fields must belong to the selected tracks.');perId[id]=metadataPatch(patch);}
  if(!Object.keys(set).length&&!Object.values(perId).some(patch=>Object.keys(patch).length))reject('Choose at least one field to change.');
  if(input.expectedRevs!==undefined)for(const[id,value]of Object.entries(object(input.expectedRevs,'Expected revisions'))){if(!ids.includes(id)||!Number.isSafeInteger(value)||Number(value)<0)reject('Expected revisions must match selected tracks.');expectedRevs[id]=Number(value);}
- return {ids,set,perId,expectedRevs,dryRun:flag(input,'dryRun'),publishConfirmed:flag(input,'publishConfirmed')};
+ if(input.expectedAlbumRevs!==undefined){const revisions=object(input.expectedAlbumRevs,'Expected album revisions');if(Object.keys(revisions).length>4000)reject('Choose fewer albums.');for(const[id,value]of Object.entries(revisions)){if(!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(id)||!Number.isSafeInteger(value)||Number(value)<0)reject('Expected album revisions are invalid.');expectedAlbumRevs[id]=Number(value);}}
+ return {ids,set,perId,expectedRevs,expectedAlbumRevs,dryRun:flag(input,'dryRun'),publishConfirmed:flag(input,'publishConfirmed')};
 }
 export function albumPatchInput(input:Record<string,unknown>){
  const allowed=['title','artistName','year'];if(Object.keys(input).some(key=>!allowed.includes(key)))reject('Album metadata supports title, artistName and year.');

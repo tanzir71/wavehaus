@@ -8,7 +8,7 @@ export interface CountGuard {table:'tracks'|'albums';column:'album_id'|'artist_i
 export interface JournalWrite {summary:string;ops:JournalOp[];guards?:RowGuard[];counts?:CountGuard[];appendTo?:string;undoIds?:string[];undoable?:boolean}
 export const journalColumns:Record<JournalTable,readonly string[]>={
  tracks:['owner_id','album_id','artist_id','title','artist_name','album_artist','album_title','track_no','disc_no','year','genre','bpm','duration_ms','codec','container','bitrate','sample_rate','bit_depth','channels','replaygain_track_db','replaygain_album_db','has_lyrics','lyrics','lyrics_synced','peaks','storage_key','size_bytes','sha256','quick_hash','original_name','original_path','mime','visibility','organise_source','added_at','deleted'],
- albums:['owner_id','title','artist_id','year','art_source','art_key','tint','visibility','sync_visibility','folder_path','created_at','deleted','merge_key'],
+ albums:['owner_id','title','artist_id','artist_name','year','art_source','art_key','tint','visibility','sync_visibility','folder_path','created_at','deleted','merge_key','identity_key'],
  artists:['name','sort_name','tint','deleted','name_key'],
 };
 export const rowKey=(table:JournalTable,id:string)=>table+':'+id;

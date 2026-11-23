@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 function next_rev(PDO $db): int { execute($db,'UPDATE revs SET n=n+1 WHERE id=1');return (int)query_one($db,'SELECT n FROM revs WHERE id=1')['n']; }
-function album_row(PDO $db,string $id): array|false { return query_one($db,'SELECT a.*,ar.name AS artist_name FROM albums a LEFT JOIN artists ar ON ar.id=a.artist_id WHERE a.id=?',[$id]); }
+function album_row(PDO $db,string $id): array|false { return query_one($db,'SELECT a.*,COALESCE(a.artist_name,ar.name) AS artist_name FROM albums a LEFT JOIN artists ar ON ar.id=a.artist_id WHERE a.id=?',[$id]); }
 function track_row(PDO $db,string $id): array|false { return query_one($db,'SELECT * FROM tracks WHERE id=?',[$id]); }
 function readable_track(PDO $db,array $auth,string $id): array {
     $track=query_one($db,'SELECT * FROM tracks WHERE id=? AND deleted=0',[$id]);if(!$track)fail('not_found','Track not found.',404);
@@ -24,13 +24,14 @@ function library_routes(PDO $db,array $auth,string $path,string $method): bool {
         // gets a later revision and is picked up on the next page/poll.
         $queries=[
             'tracks'=>['SELECT t.* FROM tracks t WHERE t.rev>? AND t.rev<=? AND (t.owner_id=? OR t.visibility=\'public\') ORDER BY t.rev',[$since,$revision,$userId]],
-            'albums'=>['SELECT a.*,ar.name AS artist_name FROM albums a LEFT JOIN artists ar ON ar.id=a.artist_id WHERE a.rev>? AND a.rev<=? AND (a.owner_id=? OR a.visibility=\'public\') ORDER BY a.rev',[$since,$revision,$userId]],
+            'albums'=>['SELECT a.*,COALESCE(a.artist_name,ar.name) AS artist_name FROM albums a LEFT JOIN artists ar ON ar.id=a.artist_id WHERE a.rev>? AND a.rev<=? AND (a.owner_id=? OR a.visibility=\'public\') ORDER BY a.rev',[$since,$revision,$userId]],
             'artists'=>['SELECT ar.* FROM artists ar WHERE ar.rev>? AND ar.rev<=? AND (EXISTS(SELECT 1 FROM tracks t WHERE t.artist_id=ar.id AND (t.owner_id=? OR t.visibility=\'public\')) OR EXISTS(SELECT 1 FROM albums a WHERE a.artist_id=ar.id AND (a.owner_id=? OR a.visibility=\'public\'))) ORDER BY ar.rev',[$since,$revision,$userId,$userId]],
             'playlists'=>['SELECT p.* FROM playlists p WHERE p.rev>? AND p.rev<=? AND (p.owner_id=? OR p.visibility=\'public\') ORDER BY p.rev',[$since,$revision,$userId]],
             'playlistItems'=>['SELECT i.* FROM playlist_items i JOIN playlists p ON p.id=i.playlist_id JOIN tracks t ON t.id=i.track_id WHERE i.rev>? AND i.rev<=? AND (p.owner_id=? OR p.visibility=\'public\') AND (t.owner_id=? OR t.visibility=\'public\') ORDER BY i.rev',[$since,$revision,$userId,$userId]],
             'likes'=>['SELECT l.* FROM likes l JOIN tracks t ON t.id=l.track_id WHERE l.rev>? AND l.rev<=? AND l.user_id=? AND (t.owner_id=? OR t.visibility=\'public\') ORDER BY l.rev',[$since,$revision,$userId,$userId]],
             'moments'=>['SELECT m.* FROM moments m JOIN tracks t ON t.id=m.track_id WHERE m.rev>? AND m.rev<=? AND m.user_id=? AND (t.owner_id=? OR t.visibility=\'public\') ORDER BY m.rev',[$since,$revision,$userId,$userId]]
         ];
+        $hidden=['tracks'=>[],'albums'=>[],'playlists'=>[]];foreach(array_keys($hidden)as $table)$queries['hidden:'.$table]=['SELECT id,hidden_rev AS rev FROM '.$table.' WHERE hidden_rev>? AND hidden_rev<=? AND visibility=\'private\' AND owner_id<>? ORDER BY hidden_rev',[$since,$revision,$userId]];
         $cutoff=PHP_INT_MAX;
         foreach($queries as $key=>[$sql,$parameters]){
             $query=$db->prepare($sql.' LIMIT '.($limit+1));$query->execute($parameters);$collectionBytes=0;
@@ -40,8 +41,8 @@ function library_routes(PDO $db,array $auth,string $path,string $method): bool {
         $rows=array_values(array_filter($rows,fn($entry)=>(int)$entry['row']['rev']<$cutoff));
         usort($rows,fn($a,$b)=>(int)$a['row']['rev']<=>(int)$b['row']['rev']);$page=[];$bytes=0;
         foreach($rows as $entry){$bytes+=strlen(json_encode($entry['row'],JSON_THROW_ON_ERROR));if(count($page)>=$limit||$bytes>8*1024**2&&count($page))break;$page[]=$entry;}
-        foreach($page as $entry)$items[$entry['key']][]=$entry['row'];$more=count($page)<count($rows)||$cutoff!==PHP_INT_MAX;$cursor=$more?(int)$page[count($page)-1]['row']['rev']:$revision;
-        reply(['rev'=>$cursor,'items'=>$items,'hidden'=>['tracks'=>[],'albums'=>[],'playlists'=>[]],'more'=>$more]);
+        foreach($page as $entry){if(str_starts_with($entry['key'],'hidden:'))$hidden[substr($entry['key'],7)][]=$entry['row']['id'];else $items[$entry['key']][]=$entry['row'];}$more=count($page)<count($rows)||$cutoff!==PHP_INT_MAX;$cursor=$more?(int)$page[count($page)-1]['row']['rev']:$revision;
+        reply(['rev'=>$cursor,'items'=>$items,'hidden'=>$hidden,'more'=>$more]);
     }
     if(preg_match('~^/api/tracks/([0-9A-HJKMNP-TV-Z]{26})/peaks$~',$path,$match)&&$method==='POST'){
         $track=readable_track($db,$auth,$match[1]);$peaks=input_peaks(body()['peaks']??null);if($peaks===null)fail('invalid_peaks','Waveforms need exactly 1000 peak values.');

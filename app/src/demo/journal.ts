@@ -23,6 +23,7 @@ export function demoWriteJournal(state:DemoState,plan:JournalWrite){
  for(const op of plan.ops)if(!op.before){if(rows(state,op.table).some(row=>row.id===op.id))conflict(op.table,op.id);if(op.table!=='artists'&&!admin&&op.after.owner_id!==state.user.id)throw new ApiError('forbidden','Choose records that belong to you.',403);}
  const changes=state.changes as unknown as Change[];for(const changeId of plan.undoIds||[])ownParent(state,changes.find(change=>change.id===changeId),now);
  const parent=plan.appendTo?ownParent(state,changes.find(change=>change.id===plan.appendTo),now):null;
+ if((parent?.ops.length||0)+(parent?.journalOps?.length||0)+plan.ops.length>10000)throw new ApiError('too_large','This action has too much undo data.',413);
  if(encoder.encode(JSON.stringify([...(parent?.ops||[]),...(parent?.journalOps||[]),...plan.ops])).byteLength>16*1024**2)throw new ApiError('too_large','This edit needs too much undo data. Choose fewer rows.',413);
  const created=new Map(tables.map(table=>[table,new Set(plan.ops.filter(op=>op.table===table&&!op.before).map(op=>op.id))]));
  for(const op of plan.ops)for(const[column,target]of [['album_id','albums'],['artist_id','artists']] as const)if(Object.hasOwn(op.after,column)&&op.after[column]!==null&&!rows(state,target).some(row=>row.id===op.after[column])&&!created.get(target)!.has(String(op.after[column])))throw new Error('Invalid record reference.');
@@ -30,10 +31,9 @@ export function demoWriteJournal(state:DemoState,plan:JournalWrite){
  state.rev+=plan.ops.length;
  for(const table of tables)for(const[ index,op]of plan.ops.entries())if(op.table===table){
   const patch=Object.fromEntries(journalColumns[table].filter(column=>Object.hasOwn(op.after,column)).map(column=>[column,op.after[column]])),revision=base+index+1;
-  if(op.before){const row=rows(state,table).find(row=>row.id===op.id)!;Object.assign(row,patch,{rev:revision},table==='tracks'?{updated_at:now}:{});}
+  if(op.before){const row=rows(state,table).find(row=>row.id===op.id)!,becamePrivate=table!=='artists'&&row.visibility==='public'&&patch.visibility==='private';Object.assign(row,patch,{rev:revision},table==='tracks'?{updated_at:now}:{},becamePrivate?{hidden_rev:revision}:{});}
   else rows(state,table).push({...(table==='albums'?{art_source:'generated',art_key:null,visibility:'private',sync_visibility:1,year:null,folder_path:null}:{}),deleted:0,...patch,id:op.id,rev:revision});
  }
- for(const album of state.albums)album.artist_name=state.artists.find(artist=>artist.id===album.artist_id)?.name||album.artist_name;
  entry.journalOps||=[];entry.journalOps.push(...plan.ops.map((op,index)=>({...op,before:op.before?{...op.before}:null,after:{...op.after,rev:base+index+1}})));
  if(!parent)changes.unshift(entry);for(const changeId of plan.undoIds||[])changes.find(change=>change.id===changeId)!.undone_at=now;
  return {changeId,updated:plan.ops.filter(op=>op.table==='tracks').length};

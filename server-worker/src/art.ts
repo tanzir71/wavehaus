@@ -1,20 +1,22 @@
 import { artInput,artRequestLimit } from '../../shared/art-input';
 import { ulid } from './crypto';
-import { stmt } from './db';
+import { all } from './db';
+import { artEditInput } from '../../shared/art-edit';
+import { JournalConflict,type JournalRow } from '../../shared/journal';
+import { writeJournal } from './journal';
 import { fail,json,readLimited } from './http';
-import { albumRow } from './library';
 import type { Auth,Env } from './types';
 export async function artworkRoutes(request:Request,env:Env,auth:Auth,path:string){
- const match=path.match(/^\/api\/albums\/([0-9A-HJKMNP-TV-Z]{26})\/art$/);if(!match||request.method!=='PUT')return null;
- const before=await albumRow(env,match[1]);if(!before||before.deleted)fail('not_found','Album not found.',404);if(before.owner_id!==auth.user.id)fail('forbidden','Choose an album that belongs to you.',403);
+ const match=path.match(/^\/api\/albums\/([0-9A-HJKMNP-TV-Z]{26})\/art$/);if((!match&&path!=='/api/albums/art')||request.method!=='PUT')return null;
+ if(auth.user.role==='listener')fail('forbidden','Your account cannot edit artwork.',403);
  let form:FormData;try{const bytes=await readLimited(request,artRequestLimit);form=await new Request(request.url,{method:'PUT',headers:{'Content-Type':request.headers.get('Content-Type')||''},body:bytes}).formData();}catch(error){if(error instanceof Error&&'status'in error)throw error;fail('invalid_art','Use multipart artwork.');}
- const {files,source}=await artInput(form),key=`art/${auth.user.id}/${before.id}/${ulid()}`,changeId=ulid(),now=Date.now();
+ const {ids,expectedRevs,appendTo}=artEditInput(form,match?.[1]),before=await all<JournalRow>(env.DB,'SELECT id,rev,owner_id,title,art_key,art_source FROM albums WHERE deleted=0 AND id IN(SELECT value FROM json_each(?))',JSON.stringify(ids));
+ if(before.length!==ids.length)fail('not_found','An album was not found.',404);if(before.some(row=>row.owner_id!==auth.user.id))fail('forbidden','Choose albums that belong to you.',403);
+ const stale=before.filter(row=>Object.hasOwn(expectedRevs,row.id)&&row.rev!==expectedRevs[row.id]);if(stale.length)throw new JournalConflict(stale.map(row=>({table:'albums',id:row.id})));
+ const {files,source}=await artInput(form),key=`art/${auth.user.id}/${ids[0]}/${ulid()}`;let result;
  try{
   for(const file of files)await env.MEDIA.put(`${key}/${file.filename}`,await file.blob.arrayBuffer(),{httpMetadata:{contentType:file.mime}});
-  const columns=['id','owner_id','title','artist_id','year','art_source','art_key','tint','visibility','sync_visibility','folder_path','created_at','rev','deleted','merge_key'];
-  const row=`json_object(${columns.map(column=>`'${column}',a.${column}`).join(',')})`;
-  await env.DB.batch([stmt(env.DB,'UPDATE revs SET n=n+1 WHERE id=1'),stmt(env.DB,'UPDATE albums SET art_source=?,art_key=?,rev=(SELECT n FROM revs WHERE id=1) WHERE id=? AND owner_id=? AND deleted=0',source,key,before.id,auth.user.id),stmt(env.DB,`INSERT INTO changes(id,user_id,actor,session_label,summary,ops,created_at) SELECT ?,?,'web',?,?,json_array(json_object('table','albums','id',a.id,'before',json(?),'after',${row})),? FROM albums a WHERE a.id=? AND a.art_key=?`,changeId,auth.user.id,auth.session.device_label,`Updated artwork for ${before.title}`,JSON.stringify(before),now,before.id,key)]);
-  if((await albumRow(env,before.id))?.art_key!==key)fail('conflict','This album changed while uploading artwork. Try again.',409);
+  result=await writeJournal(env,auth,{summary:`Updated artwork for ${ids.length===1?before[0].title:ids.length+' albums'}`,appendTo,ops:before.map(row=>({table:'albums',id:row.id,before:{id:row.id,rev:row.rev,art_key:row.art_key,art_source:row.art_source},after:{id:row.id,rev:row.rev,art_key:key,art_source:source}}))});
  }catch(error){await env.MEDIA.delete(files.map(file=>`${key}/${file.filename}`));throw error;}
- return json({artSource:source});
+ return json({...result,artSource:source,albumIds:ids});
 }

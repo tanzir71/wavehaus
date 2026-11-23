@@ -11,6 +11,7 @@ function route_request(PDO $db,string $path,string $method): never {
     if(auth_routes($db,$path,$method))exit;
     $auth=current_auth($db);
     if(journal_routes($db,$auth,$path,$method))exit;
+    if(metadata_routes($db,$auth,$path,$method))exit;
     if(uploads_routes($db,$auth,$path,$method)||artwork_routes($db,$auth,$path,$method)||library_routes($db,$auth,$path,$method)||playback_routes($db,$auth,$path,$method))exit;
     if($path==='/api/admin/settings'){
         require_admin($auth);

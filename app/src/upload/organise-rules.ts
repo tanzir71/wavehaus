@@ -1,8 +1,5 @@
-export const defaultRules = {
- tags:true, folders:true, filenames:true, stripJunk:true, titleCase:true,
- groupAlbums:true, variousArtists:true, mergeExisting:true, numberTracks:true, recordings:true,
-};
-export type RuleSettings = typeof defaultRules;
+import {defaultRules,type RuleSettings} from '../../../shared/library-rules';
+export {defaultRules,type RuleSettings} from '../../../shared/library-rules';
 export type Confidence = 'high'|'medium'|'low';
 export type FieldSource = 'tags'|'folder'|'filename'|'inferred'|'default';
 type Field = 'title'|'artist'|'albumArtist'|'album'|'trackNo'|'discNo'|'year'|'genre';
