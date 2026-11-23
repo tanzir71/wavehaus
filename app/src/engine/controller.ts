@@ -44,6 +44,7 @@ export class AudioEngine {
  loop:{a:number;b:number}|null=null;
  private catalog=new Map<string,Track>();
  private urls=new Map<string,string>();
+ private codecSupport=new Map<string,CanPlayTypeResult>();
  private wanted=false;
  private generation=0;
  private epoch=0;
@@ -214,7 +215,14 @@ export class AudioEngine {
     const candidates=[...this.catalog.values()].filter(t=>!excluded.has(t.id));const next=shuffleTracks(candidates,this.now()>>>0,this.current.artist_name).slice(0,10-this.queue.automatic.length);
     if(next.length){this.queue.addAutomatic(next,'From your library');this.queueRevision++;this.persist(false);this.changed();}
    }
-   this.options.warm?.(this.wanted&&this.queue.upcoming[0]?this.urls.get(this.queue.upcoming[0].track.id)||null:null);
+   if(this.options.warm){
+    const next=this.queue.upcoming[0]?.track;
+    // Probe this device once per format before spending bandwidth on a warm
+    // request. A negative hint never blocks an explicit playback attempt.
+    const mime=next?next.codec?.toLowerCase().includes('alac')?'audio/mp4; codecs="alac"':next.codec?.toLowerCase().includes('opus')?'audio/ogg; codecs="opus"':next.mime:'';
+    if(mime&&!this.codecSupport.has(mime))this.codecSupport.set(mime,this.options.audio.canPlayType(mime));
+    this.options.warm(this.wanted&&next&&(!mime||this.codecSupport.get(mime))?this.urls.get(next.id)||null:null);
+   }
   });
  }
  snapshot():PlayerSnapshot{const timeline=this.queue.timeline;return {queue:timeline.map(e=>e.track.id),index:Math.max(0,timeline.findIndex(e=>e.key===this.queue.current?.key)),positionMs:Math.max(0,Math.round(this.positionMs)),shuffle:this.queue.shuffle,repeat:this.queue.repeat,autoplay:this.queue.autoplay,updatedAt:this.now(),sections:this.queue.save()};}

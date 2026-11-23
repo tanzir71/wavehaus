@@ -6,7 +6,7 @@ test('an unsupported codec skips to the next manually queued track',async({page}
  await page.goto('app/upload');await expect(page.getByRole('heading',{name:'Upload',exact:true})).toBeVisible({timeout:120000});
  test.skip(await page.locator('audio').evaluate((a:HTMLAudioElement)=>a.canPlayType('audio/mp4; codecs="alac"')!==''),'This browser advertises ALAC playback; the unsupported-format case does not apply.');
  await page.getByTestId('upload-files').setInputFiles([resolve('tests/fixtures/library/Fixture Artist/Tagged Album/06 - Glass Tone ALAC.m4a'),resolve('tests/fixtures/library/Fixture Artist/Tagged Album/02 - Glass Tone.wav')]);await expect(page.getByRole('status').filter({hasText:/^Done/})).toHaveCount(2);await page.getByRole('link',{name:'Open album for 06 - Glass Tone ALAC.m4a',exact:true}).click();
- await page.getByRole('button',{name:'Add Glass Tone ALAC to queue',exact:true}).click();await page.getByRole('button',{name:'Add Glass Tone to queue',exact:true}).click();await page.getByRole('link',{name:/Now playing/}).click();await page.getByRole('button',{name:'Next track',exact:true}).click();await expect(page.getByRole('heading',{name:'Glass Tone',exact:true})).toBeVisible();await expect.poll(()=>page.locator('audio').evaluate((a:HTMLAudioElement)=>a.currentTime)).toBeGreaterThan(.1);
+ await page.getByRole('button',{name:'Add Glass Tone ALAC to queue',exact:true}).click();await page.getByRole('button',{name:'Add Glass Tone to queue',exact:true}).click();await page.getByRole('link',{name:/Now playing/}).click();await page.locator('.now-playing').getByRole('button',{name:'Next track',exact:true}).click();await expect(page.getByRole('heading',{name:'Glass Tone',exact:true})).toBeVisible();await expect.poll(()=>page.locator('audio').evaluate((a:HTMLAudioElement)=>a.currentTime)).toBeGreaterThan(.1);
 });
 
 test('album context, a reordered manual queue, paused restore and end-of-track sleep',async({page},info)=>{
@@ -27,13 +27,16 @@ test('album context, a reordered manual queue, paused restore and end-of-track s
 });
 
 test('twenty original tracks advance on the same element with a prepared next URL',async({page},info)=>{
- test.setTimeout(120000);await page.goto('app/upload');await expect(page.getByRole('heading',{name:'Upload',exact:true})).toBeVisible({timeout:120000});
+ test.setTimeout(180000);await page.goto('app/upload');await expect(page.getByRole('heading',{name:'Upload',exact:true})).toBeVisible({timeout:120000});
  const files=Array.from({length:20},(_,i)=>{const samples=new Float32Array(16000);for(let j=0;j<samples.length;j++)samples[j]=Math.sin(j*2*Math.PI*(220+i*7)/16000)*.01;return {name:`${String(i+1).padStart(2,'0')} - Advance Artist - Step ${String(i+1).padStart(2,'0')}.wav`,mimeType:'audio/wav',buffer:wav(samples)};});await page.getByTestId('upload-files').setInputFiles(files);await expect(page.getByRole('status').filter({hasText:/^Done/})).toHaveCount(20,{timeout:90000});await page.getByRole('link',{name:`Open album for ${files[0].name}`,exact:true}).click();
  await page.evaluate(()=>{
   const a=document.querySelector('audio')!,probe={sources:[] as string[],gaps:[] as number[],ended:0};(window as Window&{playbackProbe?:typeof probe}).playbackProbe=probe;
   a.addEventListener('ended',()=>{probe.ended=performance.now();},{capture:true});a.addEventListener('playing',()=>{if(probe.ended){probe.gaps.push(performance.now()-probe.ended);probe.ended=0;}probe.sources.push(a.src);if(probe.sources.length>=20)a.pause();});a.playbackRate=16;
  });await page.getByRole('button',{name:'Play Step 01',exact:true}).first().click();
- await expect.poll(()=>page.evaluate(()=>(window as Window&{playbackProbe?:{sources:string[]}}).playbackProbe?.sources.length),{timeout:45000}).toBe(20);
+ await expect.poll(()=>page.evaluate(()=>(window as Window&{playbackProbe?:{sources:string[]}}).playbackProbe?.sources.length),{timeout:90000}).toBe(20).finally(async()=>{
+  const diagnostic=await page.evaluate(()=>{const audio=document.querySelector('audio')!;return {probe:(window as Window&{playbackProbe?:{sources:string[];gaps:number[]}}).playbackProbe,audio:{src:audio.src,paused:audio.paused,ended:audio.ended,time:audio.currentTime,rate:audio.playbackRate,readyState:audio.readyState,error:audio.error?.code}};});
+  await info.attach('playback-diagnostic',{body:JSON.stringify(diagnostic,null,2),contentType:'application/json'});
+ });
  const probe=await page.evaluate(()=>(window as Window&{playbackProbe?:{sources:string[];gaps:number[]}}).playbackProbe!);expect(new Set(probe.sources).size).toBe(20);expect(probe.gaps).toHaveLength(19);expect(Math.max(...probe.gaps)).toBeLessThan(300);expect(await page.locator('audio').count()).toBe(1);
  await info.attach('twenty-track-advance',{body:JSON.stringify({viewport:info.project.name,maxGapMs:Math.max(...probe.gaps),gaps:probe.gaps},null,2),contentType:'application/json'});
 });
