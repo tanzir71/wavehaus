@@ -3,6 +3,7 @@ import { createStore,get,set } from 'idb-keyval';
 import { api } from '@backend';
 import { emptyLibrary,type Album,type Track,type Library,type LibraryDelta } from '../api/types';
 import { beginBusy } from '../ui/busy';
+import {offlineMode} from './downloads';
 import { user,authStatus,loadSession } from './session';
 export { user } from './session';
 const cache=createStore(`wh-library-${api.demo?'demo':'http'}`,'library');
@@ -21,7 +22,7 @@ export async function sync(){if(!user.value)return;if(syncing)return syncing;con
    (next[key] as unknown[])=Array.from(map.values());
   }
   for(const key of ['tracks','albums','playlists'] as const)next[key]=next[key].filter(r=>!delta.hidden[key].includes(r.id)) as never;
-  const hidden=[...delta.hidden.tracks,...delta.items.tracks.filter(row=>row.deleted).map(row=>row.id)];if(hidden.length){navigator.serviceWorker?.controller?.postMessage({type:'PURGE_TRACKS',ids:hidden});next.playlistItems=next.playlistItems.filter(row=>!hidden.includes(row.track_id));next.likes=next.likes.filter(row=>!hidden.includes(row.track_id));next.moments=next.moments.filter(row=>!hidden.includes(row.track_id));}
+  const hidden=[...delta.hidden.tracks,...delta.items.tracks.filter(row=>row.deleted).map(row=>row.id)];if(hidden.length){dispatchEvent(new CustomEvent('wh-purge-tracks',{detail:hidden}));navigator.serviceWorker?.controller?.postMessage({type:'PURGE_TRACKS',ids:hidden});next.playlistItems=next.playlistItems.filter(row=>!hidden.includes(row.track_id));next.likes=next.likes.filter(row=>!hidden.includes(row.track_id));next.moments=next.moments.filter(row=>!hidden.includes(row.track_id));}
   const removedPlaylists=new Set([...delta.hidden.playlists,...delta.items.playlists.filter(row=>row.deleted).map(row=>row.id)]);if(removedPlaylists.size)next.playlistItems=next.playlistItems.filter(row=>!removedPlaylists.has(row.playlist_id));
   if(!delta.more){const usedArtists=new Set([...next.tracks,...next.albums].map(row=>row.artist_id));next.artists=next.artists.filter(row=>usedArtists.has(row.id));}
   library.value=next;rev=delta.rev;more=delta.more;
@@ -29,9 +30,9 @@ export async function sync(){if(!user.value)return;if(syncing)return syncing;con
  }finally{finish();}})();syncing=operation;operation.finally(()=>{if(syncing===operation)syncing=null;}).catch(()=>{});return operation;}
 export async function bootLibrary(){
  busy.value=true;const finishBusy=beginBusy();clearLibrary();
- try{if(!await loadSession())return;const saved=await get<{rev:number;library:Library}>(`user:${user.value!.id}`,cache);if(saved){library.value=saved.library;rev=saved.rev;}await sync();}finally{busy.value=false;finishBusy();}
+ try{if(!await loadSession())return;const saved=await get<{rev:number;library:Library}>(`user:${user.value!.id}`,cache);if(saved){library.value=saved.library;rev=saved.rev;}try{await sync();}catch(error){if(!offlineMode.value)throw error;}}finally{busy.value=false;finishBusy();}
 }
 setInterval(()=>{if(authStatus.value==='signedIn'&&document.visibilityState==='visible')sync().catch(()=>{});},30000);
 addEventListener('focus',()=>{if(authStatus.value==='signedIn')sync().catch(()=>{});});
 
-addEventListener('wh-media-forbidden',event=>{const detail=(event as CustomEvent<{id:string;status:number}>).detail,id=detail.id,data=library.value;toast(detail.status===403?'A track is no longer shared.':'A track is no longer available.');library.value={...data,tracks:data.tracks.filter(row=>row.id!==id),playlistItems:data.playlistItems.filter(row=>row.track_id!==id),likes:data.likes.filter(row=>row.track_id!==id),moments:data.moments.filter(row=>row.track_id!==id)};navigator.serviceWorker?.controller?.postMessage({type:'PURGE_TRACKS',ids:[id]});void sync().catch(()=>{});});
+addEventListener('wh-media-forbidden',event=>{const detail=(event as CustomEvent<{id:string;status:number}>).detail,id=detail.id,data=library.value;dispatchEvent(new CustomEvent('wh-purge-tracks',{detail:[id]}));toast(detail.status===403?'A track is no longer shared.':'A track is no longer available.');library.value={...data,tracks:data.tracks.filter(row=>row.id!==id),playlistItems:data.playlistItems.filter(row=>row.track_id!==id),likes:data.likes.filter(row=>row.track_id!==id),moments:data.moments.filter(row=>row.track_id!==id)};navigator.serviceWorker?.controller?.postMessage({type:'PURGE_TRACKS',ids:[id]});void sync().catch(()=>{});});

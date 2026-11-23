@@ -175,6 +175,7 @@ export class AudioEngine {
   if(this.pendingSeek===null||this.options.audio.readyState<1)return;const d=this.durationMs,at=Math.max(0,d?Math.min(d,this.pendingSeek):this.pendingSeek);try{this.options.audio.currentTime=at/1000;this.positionMs=at;this.pendingSeek=null;this.anchor();}catch{/* Seek again when metadata becomes available. */}
  }
  private ended(){
+  if(this.loop){this.seek(this.loop.a);this.resume();return;}
   this.account();this.positionMs=this.durationMs;
   if(this.sleepTrack===this.queue.current?.key||this.sleepUntil!==null&&this.now()>=this.sleepUntil){this.finish('ended');this.pause();this.sleep(null);return;}
   if(this.temporary){this.finish('ended');this.pause();return;}

@@ -2,7 +2,9 @@ import {effect,signal} from '@preact/signals';
 import {library} from './store';
 import {user} from './session';
 import type {SearchDocument} from './search.worker';
-export const searchReady=signal(false),downloadedTrackIds=signal(new Set<string>());
+import {downloadedTrackIds} from './downloads';
+export {downloadedTrackIds} from './downloads';
+export const searchReady=signal(false);
 export const normalizeQuery=(text:string)=>text.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 let failed=false;let worker:Worker|null=null,serial=0,owner='',fingerprints=new Map<string,string>();const pending=new Map<number,(value:{id:string;score:number}[])=>void>();
 function start(){if(worker||failed)return;try{worker=new Worker(new URL('./search.worker.ts',import.meta.url),{type:'module'});worker.onmessage=event=>{if(event.data.ready)searchReady.value=true;const resolve=pending.get(event.data.id);if(resolve){pending.delete(event.data.id);resolve(event.data.results||[]);}};worker.onerror=()=>{worker?.terminate();worker=null;failed=true;fingerprints.clear();searchReady.value=false;for(const resolve of pending.values())resolve([]);pending.clear();};}catch{worker=null;failed=true;}}

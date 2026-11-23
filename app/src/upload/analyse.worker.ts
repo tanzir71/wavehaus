@@ -1,3 +1,4 @@
+import {embeddedLyrics} from '../library/lyrics';
 import { parseBlob } from 'music-metadata';
 import { hashBlob } from '../../../shared/sha256';
 import { sniffAudio } from '../../../shared/upload-input';
@@ -12,7 +13,7 @@ self.onmessage=async(event:MessageEvent<{file:File;path:string;quickOnly?:boolea
   let parsed:Awaited<ReturnType<typeof parseBlob>>|undefined,warning:string|undefined;
   try{parsed=await parseBlob(file,{duration:true,skipCovers:false});}catch{warning='Tags could not be read; used the folder and filename.';}
   const fields=organise(file.name,path,(parsed?.common||{}) as unknown as Record<string,unknown>,{rules:event.data.rules,lastModified:file.lastModified}),format=parsed?.format,common=parsed?.common,picture=common?.picture?.[0];
-  const analysis:Analysis={hash:await hashBlob(file,read=>self.postMessage({progress:read/file.size})),mime,metadata:{...fields,durationMs:Math.round((format?.duration||0)*1000),codec:format?.codec,container:format?.container,sampleRate:format?.sampleRate,bitrate:format?.bitrate===undefined?undefined:Math.round(format.bitrate),bitDepth:format?.bitsPerSample,channels:format?.numberOfChannels,bpm:common?.bpm,replaygainTrackDb:common?.replaygain_track_gain?.dB,replaygainAlbumDb:common?.replaygain_album_gain?.dB,originalPath:path,lyrics:common?.lyrics?.[0]?.text},album:{title:fields.album,artistName:fields.albumArtist,year:fields.year,folderPath:path.split('/').slice(0,-1).join('/')},picture:picture&&picture.data.byteLength<=20*1024**2?new Blob([picture.data as BlobPart],{type:picture.format}):undefined,warning};
+  const analysis:Analysis={hash:await hashBlob(file,read=>self.postMessage({progress:read/file.size})),mime,metadata:{...fields,durationMs:Math.round((format?.duration||0)*1000),codec:format?.codec,container:format?.container,sampleRate:format?.sampleRate,bitrate:format?.bitrate===undefined?undefined:Math.round(format.bitrate),bitDepth:format?.bitsPerSample,channels:format?.numberOfChannels,bpm:common?.bpm,replaygainTrackDb:common?.replaygain_track_gain?.dB,replaygainAlbumDb:common?.replaygain_album_gain?.dB,originalPath:path,...embeddedLyrics(common?.lyrics)},album:{title:fields.album,artistName:fields.albumArtist,year:fields.year,folderPath:path.split('/').slice(0,-1).join('/')},picture:picture&&picture.data.byteLength<=20*1024**2?new Blob([picture.data as BlobPart],{type:picture.format}):undefined,warning};
   self.postMessage({ok:true,result:analysis});
  }catch(error){self.postMessage({ok:false,error:{message:(error as Error).message,code:(error as {code?:string}).code,status:(error as {status?:number}).status}});}
 };
