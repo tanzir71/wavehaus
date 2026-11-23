@@ -1,0 +1,12 @@
+name = "wavehaus"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+assets = { directory = "../app/dist", not_found_handling = "single-page-application", run_worker_first = ["/api/*", "/media/*", "/art/*"] }
+[[d1_databases]]
+binding = "DB"
+database_name = "wavehaus"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+migrations_dir = "../migrations"
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "wavehaus-media"

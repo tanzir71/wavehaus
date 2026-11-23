@@ -1,0 +1,15 @@
+node_modules/
+app/dist/
+landing/dist/
+site/
+dist/
+.data/
+.wrangler/
+.work/
+test-results/
+playwright-report/
+coverage/
+*.log
+.env*
+!.env.example
+/app/public/chime-test.wav

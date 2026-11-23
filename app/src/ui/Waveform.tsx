@@ -1,0 +1,16 @@
+import { useEffect,useRef } from 'preact/hooks';
+import { time } from '../library/ids';
+export type WaveVariant='Hero'|'Now'|'Scrubber'|'Wide'|'Mini'|'Row'|'Strip';
+export function Waveform({peaks,position=0,duration=0,onSeek,variant='Scrubber',label='Playback position'}:{peaks?:string|null;position?:number;duration?:number;onSeek?:(ms:number)=>void;variant?:WaveVariant;label?:string}){
+ const canvas=useRef<HTMLCanvasElement>(null),container=useRef<HTMLDivElement>(null),drag=useRef(false),pos=useRef(position);pos.current=position;
+ useEffect(()=>{const el=canvas.current!,wrap=container.current!;const values=peaks?Uint8Array.from(atob(peaks),c=>c.charCodeAt(0)):null;
+  const draw=()=>{const {width,height}=wrap.getBoundingClientRect();if(!width||!height)return;const dpr=devicePixelRatio||1;el.width=Math.round(width*dpr);el.height=Math.round(height*dpr);const ctx=el.getContext('2d')!;ctx.scale(dpr,dpr);const styles=getComputedStyle(wrap),large=['Hero','Now'].includes(variant),reflection=!['Row','Strip'].includes(variant),bar=large?3:2,gap=large?2:1,baseline=reflection?height*.7:height*.9,count=Math.floor(width/(bar+gap));
+   const pass=(played:boolean)=>{ctx.fillStyle=styles.getPropertyValue(played?'--wh-wave-played':'--wh-wave-unplayed').trim();if(!values){ctx.fillRect(0,baseline-2,width,2);return;}for(let i=0;i<count;i++){const from=Math.floor(i*values.length/count),to=Math.max(from+1,Math.floor((i+1)*values.length/count));let value=0;for(let j=from;j<to;j++)value=Math.max(value,values[j]);const h=Math.max(2,value/255*(baseline-2));const x=i*(bar+gap);ctx.fillRect(x,baseline-h,bar,h);if(reflection){ctx.save();ctx.fillStyle=styles.getPropertyValue(played?'--wh-wave-played-reflection':'--wh-wave-reflection').trim();ctx.fillRect(x,baseline+1,bar,Math.min(height-baseline-1,h*(large?.3:.25)));ctx.restore();}}};
+   pass(false);ctx.save();ctx.beginPath();ctx.rect(0,0,width*Math.min(1,Math.max(0,pos.current/(duration||1))),height);ctx.clip();pass(true);ctx.restore();};
+  draw();const resize=new ResizeObserver(draw);resize.observe(wrap);return()=>resize.disconnect();
+ },[peaks,position,duration,variant]);
+ const at=(x:number)=>{const rect=container.current!.getBoundingClientRect();onSeek?.(Math.min(1,Math.max(0,(x-rect.left)/rect.width))*duration);};
+ return <div ref={container} class={`waveform wave-${variant.toLowerCase()}`} role={onSeek?'slider':'img'} aria-label={label} aria-valuemin={onSeek?0:undefined} aria-valuemax={onSeek?Math.round(duration/1000):undefined} aria-valuenow={onSeek?Math.round(position/1000):undefined} aria-valuetext={onSeek?`${time(position)} of ${time(duration)}`:undefined} tabIndex={onSeek?0:undefined}
+ onPointerDown={e=>{if(!onSeek)return;drag.current=true;e.currentTarget.setPointerCapture(e.pointerId);at(e.clientX);}} onPointerMove={e=>{if(drag.current)at(e.clientX);}} onPointerUp={()=>{drag.current=false;}} onPointerCancel={()=>{drag.current=false;}}
+ onKeyDown={e=>{if(!onSeek)return;const delta=e.shiftKey?30000:5000;if(['ArrowRight','ArrowLeft','Home','End'].includes(e.key)){e.preventDefault();onSeek(Math.max(0,Math.min(duration,e.key==='Home'?0:e.key==='End'?duration:position+(e.key==='ArrowRight'?delta:-delta))));}}}><canvas ref={canvas} aria-hidden="true"/></div>;
+}
