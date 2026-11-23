@@ -5,7 +5,7 @@ declare(strict_types=1);
 // the owner's Tack backend/bootstrap.php. See REFERENCES.md for the port map.
 ini_set('display_errors', '0');
 const WH_VERSION = '0.4.0';
-const WH_SCHEMA = 4;
+const WH_SCHEMA = 5;
 
 final class ApiException extends RuntimeException {
     public function __construct(public string $errorCode, string $message, int $status = 400, public ?int $retryAfter = null) { parent::__construct($message, $status); }

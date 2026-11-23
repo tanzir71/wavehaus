@@ -19,7 +19,7 @@ beforeAll(async()=>{
 });
 afterAll(async()=>{if(demo)await stopDemo();});
 describe('shared API and auth contract',()=>{
- it('reports version, schema and setup state',async()=>{const r=await owner.request('/api/health');expect(r.status).toBe(200);expect(r.body).toMatchObject({ok:true,schema:4,needsSetup:false});if(process.env.TEST_BACKEND)expect(r.body.backend).toBe(process.env.TEST_BACKEND);else expect(demo?['demo']:['php','worker']).toContain(r.body.backend);});
+ it('reports version, schema and setup state',async()=>{const r=await owner.request('/api/health');expect(r.status).toBe(200);expect(r.body).toMatchObject({ok:true,schema:5,needsSetup:false});if(process.env.TEST_BACKEND)expect(r.body.backend).toBe(process.env.TEST_BACKEND);else expect(demo?['demo']:['php','worker']).toContain(r.body.backend);});
  it('keeps setup locked, including after competing setup requests',async()=>{expect((await owner.request('/api/setup','POST',{username,password,deviceLabel:'Another setup'})).status).toBe(404);if(!demo)expect(setupStatuses.length===0||setupStatuses.join(',')==='201,404').toBe(true);});
  it('advertises private defaults, limits and closed registration',async()=>{const r=await owner.request('/api/config');expect(r.status).toBe(200);expect(r.body.maxChunkBytes).toBeGreaterThan(0);expect(r.body.maxFileBytes).toBeGreaterThan(r.body.maxChunkBytes);expect(r.body.features.uploads).toBe(true);expect(r.body.registrationMode).toBe('closed');expect((await owner.request('/api/auth/me')).body.settings.default_visibility).toBe('private');});
  it('requires the CSRF header on mutations',async()=>{const r=await owner.request('/api/auth/pair','POST',{},false);expect(r.status).toBe(403);expect(r.body.error.code).toBe('csrf');});
