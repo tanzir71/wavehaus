@@ -36,8 +36,10 @@ export class PlaybackListening implements ListeningHistory {
  }
  flush(pagehide=false){
   if(!this.scope||this.controller)return;const scope=this.scope,epoch=this.epoch,controller=new AbortController();this.controller=controller;
-  void(async()=>{while(epoch===this.epoch){const rows=await this.scan(scope+'pending:',100);if(!rows.length||epoch!==this.epoch)break;const init=json({plays:rows.map(row=>row.value)});try{
-    await this.api.request('/api/plays',{...init,signal:controller.signal,keepalive:pagehide&&new TextEncoder().encode(String(init.body)).byteLength<12*1024});
+  void(async()=>{while(epoch===this.epoch){let rows=await this.scan(scope+'pending:',100);if(!rows.length||epoch!==this.epoch)break;
+   if(pagehide){const selected:typeof rows=[],encoder=new TextEncoder();let size=12;for(const row of rows){const bytes=encoder.encode(JSON.stringify(row.value)).byteLength+(selected.length?1:0);if(size+bytes>=12*1024)break;selected.push(row);size+=bytes;}rows=selected;if(!rows.length)break;}
+   const init=json({plays:rows.map(row=>row.value)});try{
+    await this.api.request('/api/plays',{...init,signal:controller.signal,keepalive:pagehide});
     if(epoch!==this.epoch)break;await delMany(rows.map(row=>row.key),this.store);if(pagehide)break;
    }catch{break;}}})().catch(()=>{}).finally(()=>{if(this.controller===controller)this.controller=null;});
  }

@@ -88,7 +88,7 @@ export class AudioEngine {
  private readBuffered(){const a=this.options.audio;try{this.bufferedMs=a.buffered.length?a.buffered.end(a.buffered.length-1)*1000:0;}catch{this.bufferedMs=0;}}
  configure(userId:string|null){
   this.clear();this.epoch++;this.options.persistence.configure(userId);this.options.listening.configure(userId);this.historyReady=false;this.recent.clear();
-  if(userId){const epoch=this.epoch;void this.options.listening.recent(this.now()-7200000).then(rows=>{if(epoch!==this.epoch)return;for(const row of rows)this.recent.set(row.trackId,Math.max(this.recent.get(row.trackId)||0,row.startedAt));this.historyReady=true;this.prepareNext();}).catch(()=>{if(epoch===this.epoch){this.historyReady=true;this.prepareNext();}});}
+  if(userId){this.options.listening.flush();const epoch=this.epoch;void this.options.listening.recent(this.now()-7200000).then(rows=>{if(epoch!==this.epoch)return;for(const row of rows)this.recent.set(row.trackId,Math.max(this.recent.get(row.trackId)||0,row.startedAt));this.historyReady=true;this.prepareNext();}).catch(()=>{if(epoch===this.epoch){this.historyReady=true;this.prepareNext();}});}
  }
  setCatalog(tracks:Track[]){
   const previous=this.current;this.catalog=new Map(tracks.filter(t=>!t.deleted).map(t=>[t.id,t]));this.urls=new Map([...this.catalog.values()].map(t=>[t.id,this.options.url(t)]));
@@ -116,7 +116,7 @@ export class AudioEngine {
  pause(){
   this.account();this.wanted=false;this.interrupted=false;this.generation++;this.cancelRecovery();this.options.warm?.(null);this.options.audio.pause();this.state='paused';this.persist(true);this.publishPosition();this.changed();
  }
- stop(){this.pause();this.seek(0);}
+ stop(){this.pause();this.seek(0);this.persist(true);}
  seek(ms:number,fast=false){
   if(!this.current||!Number.isFinite(ms))return;this.account();const duration=this.durationMs,next=Math.max(0,duration?Math.min(duration,ms):ms);this.positionMs=next;
   const a=this.options.audio;if(a.readyState>=1){try{if(fast&&typeof a.fastSeek==='function')a.fastSeek(next/1000);else a.currentTime=next/1000;this.pendingSeek=null;}catch{this.pendingSeek=next;}}else this.pendingSeek=next;

@@ -1,15 +1,17 @@
-Wavehaus v0.2.1 corrects the landing product mockups and the fullscreen footer.
+Wavehaus M3 hardens playback and connects the core player screens to one persistent audio engine.
 
 Preview: https://tanzir71.github.io/wavehaus/
 App: https://tanzir71.github.io/wavehaus/app/
 
 What to try:
-1. Compare the desktop/mobile previews and the three feature crops with the approved design.
-2. Inspect the access panel: dark selected tab, two toggles, RK avatar and one compact request row.
-3. Press End on a fullscreen desktop window; the footer credits should remain visible.
+1. Start an album, add two tracks, reorder them in Queue and reload. Resume at the saved position.
+2. Scrub the waveform or use arrow keys, toggle shuffle/repeat, and choose an end-of-track sleep timer.
+3. On Android Brave with Background play enabled, lock the phone and check track advance and lock-screen artwork/controls.
 
-The mockups are native HTML/CSS with the actual Figma artwork, icons and waveforms. They scale proportionally and need no browser JavaScript. Fixed preview geometry allows their interiors to render lazily without changing the document height. The closing wave spans wide displays, and the footer uses the designed compact spacing.
+The engine resolves the next source before ended, calls play synchronously, handles external pauses and retries network failures with bounded backoff. Local persistence keeps the full queue; a bounded cloud window preserves its sections and context. Listening events retry idempotently. Sleep offers 5/15/30/45/60 minutes or end of track, with a final fade on desktop/Android.
 
-Validated at 412, 768, 1440 and 1920 px wide. Landing, Background play and shared-hosting docs measured 100/100/100/100 in Lighthouse. Android and desktop browser checks cover one-jump footer reachability, local preview artwork and all 15 static pages without JavaScript. See docs/landing-fix-verification.md.
+Now Playing and Queue follow the approved design, using generated/user covers in the actual app. Canvas waveforms support keyboard and pointer seeking, proportional album segments and saved moment markers. The mobile mini player uses the Mini geometry; desktop keeps its single-row player. The v0.2.1 landing mockup/footer corrections are retained.
 
-Both server archives retain the M2 feature set. Playback hardening continues in M3. Physical screen-lock playback and OS-level share-sheet delivery remain unverified.
+PHP's authenticated range streamer remains the default. Optional X-Sendfile and protected LiteSpeed-context handoffs are configured in the private data directory; details ship in MEDIA-OFFLOAD.md in the PHP archive. No client dependency was added. Local validation includes 50 unit checks, 12 offload path/header checks, the API suite on all three adapters, server browser flows, paused restore, queue ordering, and twenty distinct original tracks with all nineteen measured browser transitions below 300 ms on one audio element. Home, Now Playing and Queue accessibility measured 100. See docs/m3-decisions.md and docs/m3-verification.md for evidence and limits.
+
+Physical Android screen-lock playback and a real LiteSpeed context remain unverified. Viewport emulation does not establish those results. M3 autoplay uses an initial local selection; the full M6 radio-ranking worker comes later. A–B and moment editing remain M9. This is a milestone preview, not the final 1.0 release.
