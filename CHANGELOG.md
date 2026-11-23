@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.0 — M8 · 2026-11-24
+
+Your assistant. Your permissions.
+
+- AI assistants settings offers browser-operation guidance and expiring API tokens with read, upload, organise and admin scopes. Raw tokens are shown once; revocation and role changes take effect on later requests.
+- PHP, Worker and demo enforce token scopes, expiry and a 600-request-per-minute limit. Bearer requests use the same library privacy rules and do not require cookie CSRF headers.
+- The zero-dependency Node stdio MCP server includes search, album reads, shared-rule organise/rename previews, resumable uploads, artwork, privacy, playlists and Undo. Its built files ship in both archives.
+- Browser and API actions retain device/token attribution. Activity can filter actors and safely undo unchanged rows when newer edits conflict; expired snapshots are pruned while summaries remain.
+- Upload/artwork/rename/review/privacy controls have stable hooks, direct bulk/review routes and readable busy states. Assistant uploads default to Private, including inside albums with public future defaults.
+
+No dependency added. Publication builds only, as requested; no additional tests or browser/device checks were run.
+
 ## v0.7.0 — M7 · 2026-11-24
 
 A library with people you choose.

@@ -1,6 +1,6 @@
 import {journalColumns,JournalConflict,reversibleOperation,type JournalTable,type JournalWrite,type CountGuard} from '../../shared/journal';
 import {ulid} from './crypto';
-import {refreshVisibility} from './visibility-refresh';
+import {refreshVisibility,refreshAuditAlbums} from './visibility-refresh';
 import {stmt} from './db';
 import {fail} from './http';
 import type {Auth,Env,Statement} from './types';
@@ -17,7 +17,7 @@ const quote=(name:string)=>'"'+name+'"'; // Names only come from journalColumns.
 
 /** Every write, including its journal, is conditional on one atomic gate. */
 export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
- plan=await refreshVisibility(env,plan);const playlistOnly=plan.ops.every(op=>op.system||op.table==='playlists'||op.table==='playlist_items');if(auth.user.role==='listener'&&!playlistOnly)fail('forbidden','Your account cannot edit library metadata.',403);
+ plan=await refreshVisibility(env,plan);if(auth.token)plan=await refreshAuditAlbums(env,plan);const playlistOnly=plan.ops.every(op=>op.system||op.table==='playlists'||op.table==='playlist_items');if(auth.user.role==='listener'&&!playlistOnly)fail('forbidden','Your account cannot edit library metadata.',403);
  if(plan.ops.length>10000||(plan.undoIds?.length||0)>2000)fail('too_large','Choose fewer records at once.',413);
  let journalBytes=0;for(const op of plan.ops){journalBytes+=encoder.encode(JSON.stringify(op)).byteLength;if(journalBytes>16*1024**2)fail('too_large','This edit needs too much undo data. Choose fewer rows.',413);}
  if(!plan.ops.length&&!plan.undoIds?.length)return {changeId:plan.appendTo||null,updated:0};
@@ -44,23 +44,23 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
  if(plan.appendTo){conditions.push('EXISTS(SELECT 1 FROM changes c WHERE c.id=? AND c.user_id=u.id AND c.undone_at IS NULL AND c.undoable=1 AND c.created_at>=? AND json_array_length(c.ops)+(SELECT COUNT(*) FROM change_ops o WHERE o.change_id=c.id)+?<=10000 AND length(CAST(c.ops AS BLOB))+(SELECT COALESCE(SUM(COALESCE(length(CAST(o.before_json AS BLOB)),0)+length(CAST(o.after_json AS BLOB))),0) FROM change_ops o WHERE o.change_id=c.id)+?<=16777216)');parameters.push(plan.appendTo,now-30*86400000,plan.ops.length,journalBytes+32*plan.ops.length);}
  if(plan.undoIds?.length){conditions.push('(SELECT COUNT(*) FROM changes WHERE id IN(SELECT value FROM json_each(?)) AND user_id=u.id AND undone_at IS NULL AND undoable=1 AND created_at>=?)=?');parameters.push(JSON.stringify(plan.undoIds),now-30*86400000,plan.undoIds.length);}
  const statements:Statement[]=[stmt(env.DB,`INSERT INTO mutation_guards(id) SELECT ? FROM users u WHERE ${conditions.join(' AND ')}`,gate,...parameters)];
- if(!plan.appendTo)statements.push(stmt(env.DB,`INSERT INTO changes(id,user_id,actor,session_label,summary,ops,created_at,undoable) SELECT ?,?,'web',?,?,'[]',?,? WHERE ${guardExists}`,changeId,auth.user.id,auth.session.device_label,plan.summary,now,plan.undoable===false?0:1,gate));
+ if(!plan.appendTo)statements.push(stmt(env.DB,`INSERT INTO changes(id,user_id,actor,session_label,token_name,summary,ops,created_at,undoable) SELECT ?,?,?,?, ?,?,'[]',?,? WHERE ${guardExists}`,changeId,auth.user.id,auth.token?'api':'web',auth.session.device_label,auth.token?.name||null,plan.summary,now,plan.undoable===false?0:1,gate));
  statements.push(stmt(env.DB,`UPDATE revs SET n=n+? WHERE id=1 AND ${guardExists}`,plan.ops.length,gate));
  const revision=(index:string)=>`(SELECT n FROM revs WHERE id=1)-${plan.ops.length}+${index}+1`;
  for(const table of tables){
   const indexed=plan.ops.map((op,index)=>({...op,index})).filter(op=>op.table===table);
   for(const creating of [true,false])for(const group of chunks(indexed.filter(op=>!op.before===creating))){
    const allowed=journalColumns[table],columns=allowed.filter(column=>(creating||column!=='updated_at')&&group.some(op=>Object.hasOwn(op.after,column)));
-   const payload=group.map(op=>({id:op.id,index:op.index,patch:Object.fromEntries(columns.filter(column=>Object.hasOwn(op.after,column)).map(column=>[column,op.after[column]]))}));
+   const payload=group.map(op=>({id:op.id,index:op.index,actor:auth.token?'api':'web',actorName:auth.token?.name||auth.session.device_label,patch:Object.fromEntries(columns.filter(column=>Object.hasOwn(op.after,column)).map(column=>[column,op.after[column]]))}));
    if(creating){
     // Creation planners provide the same required fields for every new row in
     // a table. Nullable fields may still be omitted and use SQLite defaults.
     for(const column of columns)if(group.some(op=>!Object.hasOwn(op.after,column)))throw new Error('New records must provide a consistent field set.');
-    const names=['id',...columns,'rev'],values=["json_extract(j.value,'$.id')",...columns.map(column=>`json_extract(j.value,'$.patch.${column}')`),revision("json_extract(j.value,'$.index')")];
+    const names=['id',...columns,...(table==='albums'?['last_actor','last_actor_name']:[]),'rev'],values=["json_extract(j.value,'$.id')",...columns.map(column=>`json_extract(j.value,'$.patch.${column}')`),...(table==='albums'?["json_extract(j.value,'$.actor')","json_extract(j.value,'$.actorName')"]:[]),revision("json_extract(j.value,'$.index')")];
     statements.push(stmt(env.DB,`INSERT INTO ${table}(${names.map(quote).join(',')}) SELECT ${values.join(',')} FROM json_each(?) j WHERE ${guardExists}`,JSON.stringify(payload),gate));
    }else{
     const setters=columns.map(column=>`${quote(column)}=CASE WHEN json_type(j.value,'$.patch.${column}') IS NOT NULL THEN json_extract(j.value,'$.patch.${column}') ELSE r.${quote(column)} END`);
-    setters.push('rev='+revision("json_extract(j.value,'$.index')"));if(table==='tracks'||table==='playlists')setters.push('updated_at='+now);
+    if(table==='albums')setters.push("last_actor=json_extract(j.value,'$.actor')","last_actor_name=json_extract(j.value,'$.actorName')");setters.push('rev='+revision("json_extract(j.value,'$.index')"));if(table==='tracks'||table==='playlists')setters.push('updated_at='+now);
     if(['tracks','albums','playlists'].includes(table))setters.push(`hidden_rev=CASE WHEN r.visibility='public' AND CASE WHEN json_type(j.value,'$.patch.visibility') IS NOT NULL THEN json_extract(j.value,'$.patch.visibility') ELSE r.visibility END='private' THEN ${revision("json_extract(j.value,'$.index')")} ELSE r.hidden_rev END`);
     statements.push(stmt(env.DB,`UPDATE ${table} AS r SET ${setters.join(',')} FROM json_each(?) j WHERE r.id=json_extract(j.value,'$.id') AND ${guardExists}`,JSON.stringify(payload),gate));
    }
@@ -73,7 +73,7 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
   statements.push(stmt(env.DB,`INSERT INTO change_ops(change_id,position,table_name,row_id,before_json,after_json) SELECT ?,${rev},json_extract(j.value,'$.table'),json_extract(j.value,'$.id'),json_extract(j.value,'$.before'),json_set(json_extract(j.value,'$.after'),'$.rev',${rev}) FROM json_each(?) j WHERE ${guardExists}`,changeId,payload,gate));
  }
  for(const table of ['tracks','albums'] as const){const ids=plan.ops.filter(op=>op.table===table&&op.after.visibility==='private').map(op=>op.id);if(ids.length)statements.push(stmt(env.DB,`INSERT OR IGNORE INTO change_audience(change_id,user_id) SELECT ?,owner_id FROM ${table} WHERE owner_id<>? AND id IN(SELECT value FROM json_each(?)) AND ${guardExists}`,changeId,auth.user.id,JSON.stringify(ids),gate));}
- if(plan.undoIds?.length)statements.push(stmt(env.DB,`UPDATE changes SET undone_at=? WHERE id IN(SELECT value FROM json_each(?)) AND user_id=? AND ${guardExists}`,now,JSON.stringify(plan.undoIds),auth.user.id,gate));
+ if(plan.undoIds?.length)statements.push(stmt(env.DB,`UPDATE changes SET undone_at=?,undo_note=? WHERE id IN(SELECT value FROM json_each(?)) AND user_id=? AND ${guardExists}`,now,plan.undoNote||null,JSON.stringify(plan.undoIds),auth.user.id,gate));
  statements.push(stmt(env.DB,'DELETE FROM mutation_guards WHERE id=?',gate));
  let result;try{result=await env.DB.batch(statements);}catch(error){if(/UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/.test(error instanceof Error?error.message:''))throw new JournalConflict(guards.map(({table,id})=>({table,id})));throw error;}
  if(!result[0].meta.changes)throw new JournalConflict(guards.map(({table,id})=>({table,id})));

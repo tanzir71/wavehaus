@@ -1,10 +1,10 @@
 import { ApiError } from '../api/types';
-import { mutate,readState,type DemoState,type DemoAuth } from './store';
+import { currentDemoToken,mutate,readState,type DemoState,type DemoAuth } from './store';
 import { codes,passwordHash,passwordVerify,randomToken,recoveryHash,sha,ulid } from '../../../shared/auth-crypto';
 const fail=(code:string,message:string,status=400):never=>{throw new ApiError(code,message,status);};
 export function session(auth:DemoAuth,label:string){const id=ulid(),at=Date.now();auth.sessions.push({id,device_label:label,created_at:at,last_seen_at:at,expires_at:at+180*86400000});auth.currentSession=id;}
 export async function ensureAuth(){if((await readState())?.auth)return;await mutate(async state=>{if(state.auth)return;const list=await codes();state.auth={passwordHash:await passwordHash('wavehaus-demo'),currentSession:null,sessions:[],codes:list.map(c=>({id:c.id,hash:c.hash,used_at:null})),pairs:[],failures:{count:0,at:0,lockedUntil:0,strikes:0}};session(state.auth,'This browser · demo');});}
-function requireAuth(state:DemoState){const auth=state.auth!;if(state.user.status==='disabled'||!auth.sessions.some(s=>s.id===auth.currentSession&&s.expires_at>Date.now()))fail('unauthenticated','Sign in to continue.',401);return auth;}
+function requireAuth(state:DemoState){const auth=state.auth!;if(state.user.status==='disabled'||!currentDemoToken()&&!auth.sessions.some(s=>s.id===auth.currentSession&&s.expires_at>Date.now()))fail('unauthenticated','Sign in to continue.',401);return auth;}
 const reply=(data:unknown,status=200)=>Response.json(data,{status});
 export async function demoAuth(request:Request,path:string):Promise<Response|null>{
  if(!/^\/api\/(?:auth\/|sessions(?:\/|$)|setup(?:\/|$))/.test(path))return null;
@@ -24,4 +24,4 @@ export async function demoAuth(request:Request,path:string):Promise<Response|nul
  if((path==='/api/auth/recovery-codes'||path==='/api/auth/password')&&method==='POST')return mutate(async s=>{const data=await input(),auth=s.auth!;if(!await passwordVerify(String(data.password||''),auth.passwordHash))fail('invalid_credentials','Username or password is incorrect.',401);if(path.endsWith('/password')){if([...String(data.newPassword||'')].length<10)fail('validation','Use at least 10 characters.');auth.passwordHash=await passwordHash(String(data.newPassword));auth.sessions=auth.sessions.filter(x=>x.id===auth.currentSession);auth.pairs=[];return reply({ok:true});}const list=await codes();auth.codes=list.map(c=>({id:c.id,hash:c.hash,used_at:null}));return reply({recoveryCodes:list.map(c=>c.code)});});
  return null;
 }
-export const demoSignedIn=(state:DemoState)=>state.user.status!=='disabled'&&!!state.auth?.sessions.some(s=>s.id===state.auth?.currentSession&&s.expires_at>Date.now());
+export const demoSignedIn=(state:DemoState)=>state.user.status!=='disabled'&&(currentDemoToken()?.userId===state.user.id||!!state.auth?.sessions.some(s=>s.id===state.auth?.currentSession&&s.expires_at>Date.now()));

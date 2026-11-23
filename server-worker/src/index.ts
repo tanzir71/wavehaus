@@ -21,7 +21,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
    let schema;try{schema=await one<{version:number}>(env.DB,'SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations');}catch{fail('migrations_pending','Apply the D1 migrations before opening Wavehaus.',503);}
    if(!schema||schema.version!==SCHEMA)fail('migrations_pending','Apply the matching D1 migrations before deploying this release.',503);
    if(!env.APP_SECRET||new TextEncoder().encode(env.APP_SECRET).length<32)fail('configuration','Set APP_SECRET with wrangler secret put APP_SECRET (at least 32 random bytes).',503);
-   if(!['GET','HEAD'].includes(request.method)&&request.headers.get('X-Wavehaus')!=='1')fail('csrf','Missing X-Wavehaus header.',403);
+   if(!['GET','HEAD'].includes(request.method)&&request.headers.get('X-Wavehaus')!=='1'&&!(await currentAuth(request,env,false))?.token)fail('csrf','Missing X-Wavehaus header.',403);
    if(path.startsWith('/api/'))response=await apiRoute(request,env,path);
    else response=await serveMedia(request,env,(await currentAuth(request,env))!,path);
   }else if(path==='/app'||path==='/app/')response=Response.redirect(new URL(APP_BASE,url),302);

@@ -18,6 +18,8 @@ require_once $lib.'/metadata.php';
 require_once $lib.'/visibility.php';
 require_once $lib.'/playlists.php';
 require_once $lib.'/access.php';
+require_once $lib.'/tokens.php';
+require_once $lib.'/read-api.php';
 require_once $lib.'/router.php';
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
@@ -30,7 +32,7 @@ try {
     if($path===null)fail('not_found','Not found.',404);
     if(str_contains($path,"\0")||str_contains($path,'..')||preg_match('~^/(?:lib|migrations|data[^/]*|\.)~',$path))fail('not_found','Not found.',404);
     if(str_starts_with($path,'/api/')){
-        if(!in_array($method,['GET','HEAD'],true)&&($_SERVER['HTTP_X_WAVEHAUS']??'')!=='1')fail('csrf','Missing X-Wavehaus header.',403);
+        if(!in_array($method,['GET','HEAD'],true)&&($_SERVER['HTTP_X_WAVEHAUS']??'')!=='1'){$csrfAuth=current_auth(database(),false);if(!isset($csrfAuth['token']))fail('csrf','Missing X-Wavehaus header.',403);}
         route_request(database(),$path,$method);
     }
     if(str_starts_with($path,'/media/')||str_starts_with($path,'/art/')){$db=database();serve_media($db,current_auth($db),$path,$method);}

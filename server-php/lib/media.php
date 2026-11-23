@@ -25,7 +25,7 @@ function media_range(?string $header,int $size): array {
 }
 function stream_media_file(string $file,string $mime,string $etag,string $method,bool $audio): never {
     if(!is_file($file))fail('not_found',$audio?'Audio file not found.':'Artwork has not arrived yet.',404);
-    $size=filesize($file);header('Content-Type: '.$mime);header('Cache-Control: '.($audio?'private, no-store':'private, max-age=31536000, immutable'));header('Vary: Cookie');header('ETag: '.$etag);
+    $size=filesize($file);header('Content-Type: '.$mime);header('Cache-Control: '.($audio?'private, no-store':'private, max-age=31536000, immutable'));header('Vary: Cookie, Authorization');header('ETag: '.$etag);
     if(!$audio){header('Content-Length: '.$size);if($method!=='HEAD')readfile($file);exit;}
     header('Accept-Ranges: bytes');$raw=$_SERVER['HTTP_RANGE']??null;if(isset($_SERVER['HTTP_IF_RANGE'])&&$_SERVER['HTTP_IF_RANGE']!==$etag)$raw=null;
     if(($_SERVER['HTTP_IF_NONE_MATCH']??'')===$etag&&!isset($_SERVER['HTTP_RANGE'])){http_response_code(304);exit;}

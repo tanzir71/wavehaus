@@ -13,7 +13,7 @@ export function toast(message:string){undoAction.value=null;notice.value=message
 export function offerUndo(message:string,changeId:string|null){toast(message);undoAction.value=changeId;}
 export function clearLibrary(){syncEpoch++;syncing=null;rev=0;library.value=emptyLibrary();undoAction.value=null;}
 export function insertUpload(track:Track,album:Album){if(track.owner_id!==user.value?.id)return;const replace=<T extends {id:string}>(rows:T[],row:T)=>[...rows.filter(item=>item.id!==row.id),row];library.value={...library.value,tracks:replace(library.value.tracks,track),albums:replace(library.value.albums,album)};}
-export async function sync(){if(!user.value)return;if(syncing)return syncing;const epoch=syncEpoch,userId=user.value.id;const operation=(async()=>{
+export async function sync(){if(!user.value)return;if(syncing)return syncing;const epoch=syncEpoch,userId=user.value.id;const operation=(async()=>{const finish=beginBusy();try{
  let more=true;while(more){const delta=await api.request<LibraryDelta>(`/api/library?since=${rev}`),next={...library.value};
   if(epoch!==syncEpoch||user.value?.id!==userId)return;
   for(const key of Object.keys(next) as (keyof Library)[]){const map=new Map((next[key] as unknown as Record<string,unknown>[]).map(r=>[String(r.id||`${r.user_id||r.playlist_id}:${r.track_id}`),r]));
@@ -26,7 +26,7 @@ export async function sync(){if(!user.value)return;if(syncing)return syncing;con
   if(!delta.more){const usedArtists=new Set([...next.tracks,...next.albums].map(row=>row.artist_id));next.artists=next.artists.filter(row=>usedArtists.has(row.id));}
   library.value=next;rev=delta.rev;more=delta.more;
  }if(epoch===syncEpoch&&user.value?.id===userId)await set(`user:${userId}`,{rev,library:library.value},cache);
- })();syncing=operation;operation.finally(()=>{if(syncing===operation)syncing=null;}).catch(()=>{});return operation;}
+ }finally{finish();}})();syncing=operation;operation.finally(()=>{if(syncing===operation)syncing=null;}).catch(()=>{});return operation;}
 export async function bootLibrary(){
  busy.value=true;const finishBusy=beginBusy();clearLibrary();
  try{if(!await loadSession())return;const saved=await get<{rev:number;library:Library}>(`user:${user.value!.id}`,cache);if(saved){library.value=saved.library;rev=saved.rev;}await sync();}finally{busy.value=false;finishBusy();}

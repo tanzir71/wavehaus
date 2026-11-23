@@ -1,5 +1,7 @@
-import {refreshTargets,visibilityRefresh} from '../../shared/visibility-refresh';
+import {refreshTargets,visibilityRefresh,auditAlbumRows} from '../../shared/visibility-refresh';
 import type {JournalRow,JournalWrite} from '../../shared/journal';
 import {all} from './db';
 import type {Env} from './types';
 export async function refreshVisibility(env:Env,plan:JournalWrite){const {trackIds,albumIds,playlistIds}=refreshTargets(plan);if(!trackIds.length&&!albumIds.length&&!playlistIds.length)return plan;const [artists,items]=await Promise.all([all<JournalRow>(env.DB,"SELECT id,rev FROM artists WHERE deleted=0 AND(id IN(SELECT artist_id FROM tracks WHERE id IN(SELECT value FROM json_each(?))) OR id IN(SELECT artist_id FROM albums WHERE id IN(SELECT value FROM json_each(?))))",JSON.stringify(trackIds),JSON.stringify(albumIds)),all<JournalRow>(env.DB,'SELECT id,rev,playlist_id,track_id FROM playlist_items WHERE deleted=0 AND(track_id IN(SELECT value FROM json_each(?)) OR playlist_id IN(SELECT value FROM json_each(?))) LIMIT 10001',JSON.stringify(trackIds),JSON.stringify(playlistIds))]);return visibilityRefresh(plan,artists,items);}
+
+export async function refreshAuditAlbums(env:Env,plan:JournalWrite){const tracks=plan.ops.filter(op=>op.table==='tracks'),ids=tracks.map(op=>op.id),afterIds=tracks.flatMap(op=>typeof op.after.album_id==='string'?[op.after.album_id]:[]);if(!ids.length)return plan;const albums=await all<JournalRow>(env.DB,'SELECT id,rev FROM albums WHERE id IN(SELECT album_id FROM tracks WHERE id IN(SELECT value FROM json_each(?))) OR id IN(SELECT value FROM json_each(?))',JSON.stringify(ids),JSON.stringify(afterIds));return auditAlbumRows(plan,albums);}
