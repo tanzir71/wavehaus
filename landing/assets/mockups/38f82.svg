@@ -1,0 +1,20 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="13.64" height="18.6" viewBox="0 0 13.64 18.6" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Frame" clip-path="url(#clip0_0_529)">
+<g id="Icon/repeat1" clip-path="url(#clip1_0_529)">
+<path id="Vector" d="M9.66167 1.13667L11.935 3.41L9.66167 5.68333" stroke-width="1.24" stroke-linecap="round" stroke-linejoin="round" stroke="#8EA2FF"/>
+<path id="Vector_2" d="M1.705 6.25167V5.68333C1.705 5.08041 1.94451 4.50218 2.37084 4.07584C2.79718 3.64951 3.37541 3.41 3.97833 3.41H11.935" stroke-width="1.24" stroke-linecap="round" stroke-linejoin="round" stroke="#8EA2FF"/>
+<path id="Vector_3" d="M3.97833 12.5033L1.705 10.23L3.97833 7.95667" stroke-width="1.24" stroke-linecap="round" stroke-linejoin="round" stroke="#8EA2FF"/>
+<path id="Vector_4" d="M11.935 7.38833V7.95667C11.935 8.55959 11.6955 9.13782 11.2692 9.56416C10.8428 9.99049 10.2646 10.23 9.66167 10.23H1.705" stroke-width="1.24" stroke-linecap="round" stroke-linejoin="round" stroke="#8EA2FF"/>
+<path id="Vector_5" d="M6.25167 5.68333H6.82V7.95667" stroke-width="1.24" stroke-linecap="round" stroke-linejoin="round" stroke="#8EA2FF"/>
+</g>
+<circle id="Ellipse" cx="6.82" cy="17.36" r="1.24" fill="#8EA2FF"/>
+</g>
+<defs>
+<clipPath id="clip0_0_529">
+<rect width="13.64" height="18.6" fill="white"/>
+</clipPath>
+<clipPath id="clip1_0_529">
+<rect width="13.64" height="13.64" fill="white"/>
+</clipPath>
+</defs>
+</svg>

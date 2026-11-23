@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.1 — Landing fixes · 2026-11-23
+
+The approved mockups, with a footer that stays reachable.
+
+- Replaced simplified landing illustrations with native HTML/CSS matching the Figma product screens, artwork, waveforms and access controls.
+- Removed deferred section sizing that changed document height during a jump to the bottom and left the footer out of view.
+- Matched the closing headline and compact footer spacing, with wave artwork spanning fullscreen displays.
+
+Verified at 412, 768, 1440 and 1920 px wide. The landing remains static and works without JavaScript.
+
 ## v0.2.0 — M2 · 2026-11-23
 
 Drop in your music. Pick up where you left off.
