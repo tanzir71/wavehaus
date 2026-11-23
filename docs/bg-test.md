@@ -2,6 +2,8 @@
 
 No physical-device run has been observed yet. These are not replaced by Android viewport emulation.
 
+24 Nov 2026: the owner explicitly waived all further testing. This matrix stays unverified; no device run is requested. M5 implements the optional in-app check as a product feature without running it during development.
+
 | Device / route | Result |
 |---|---|
 | Android Brave, installed PWA, Background play on | Unverified |
