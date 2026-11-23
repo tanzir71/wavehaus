@@ -27,7 +27,7 @@ try{
  await completed(launch(process.execPath,['node_modules/@playwright/test/cli.js','test','tests/e2e/auth-server.spec.ts'],{stdio:'inherit',env:{...process.env,AUTH_BASE_URL:base}}));
  if(backend==='php')await appendFile(resolve(temporary,'config.php'),`\ndefine('RESET_OWNER', '${secret}');\n`);
  const reset=()=>fetch(base+'/api/setup/reset',{method:'POST',headers:{'X-Wavehaus':'1','Content-Type':'application/json'},body:JSON.stringify({resetString:secret,newPassword:'Owner reset fixture passphrase!'})});
- const resets=await Promise.all([reset(),reset()]);if(resets.map(r=>r.status).sort().join(',')!=='200,404')throw new Error('Owner reset must succeed exactly once.');const resetBody=await resets.find(r=>r.status===200).json();if(resetBody.recoveryCodes.length!==10)throw new Error('Owner reset must issue ten new codes.');console.log('One-use owner reset passed, including competing requests.');
+ const resets=await Promise.all([reset(),reset()]),statuses=resets.map(r=>r.status).sort().join(',');if(statuses!=='200,404')throw new Error('Owner reset must succeed exactly once; received '+statuses);const resetBody=await resets.find(r=>r.status===200).json();if(resetBody.recoveryCodes.length!==10)throw new Error('Owner reset must issue ten new codes.');console.log('One-use owner reset passed, including competing requests.');
  console.log(`${backend} API contract passed.`);
 }catch(error){console.error(output.replaceAll(secret,'[redacted]'));throw error;}
 finally{

@@ -39,7 +39,7 @@ with zipfile.ZipFile(archive) as package:
 
 probe = subprocess.run(['php', '-r', 'echo json_encode([PHP_BINARY,get_loaded_extensions()]);'], check=True, capture_output=True, text=True)
 php, extensions = json.loads(probe.stdout)
-arguments = []
+arguments = ['-d', 'opcache.enable_cli=0']
 if os.name == 'nt':
     ext = Path(php).parent / 'ext'
     arguments += ['-d', f'extension_dir={ext}']
