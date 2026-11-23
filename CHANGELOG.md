@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.0 — M5 · 2026-11-24
+
+Screen off. Still your music.
+
+- Android and iPhone Brave setup checklists include browser handoff, install steps, both iPhone shortcut methods, URL copying and the downloadable icon.
+- Home and Now Playing hints respect dismissal for seven days and stop after three browser sessions; desktop avoids phone-only prompts.
+- The optional in-app playback check measures at least 30 seconds hidden, accepts a completed chime and restores the previous queue paused. Its result appears in Settings.
+
+Builds and publication only, as requested. Physical-device outcomes remain unverified.
+
 ## v0.4.0 — M4 · 2026-11-24
 
 Drop a folder. Make it yours.

@@ -56,6 +56,8 @@ export const setAutoplay=(value:boolean)=>engine.setAutoplay(value);
 export const setLoop=(aMs:number,bMs:number|null)=>engine.setLoop(aMs,bMs);
 export const sleep=(minutes:number|'endOfTrack'|null)=>engine.sleep(minutes);
 export const setVolume=(value:number)=>engine.setVolume(value);
+export const playbackSnapshot=()=>engine.snapshot();
+export const endTemporary=(saved:ReturnType<typeof engine.snapshot>)=>engine.endTemporary(saved);
 const removeHandlers=media.handlers({play:resume,pause,stop,previoustrack:prev,nexttrack:()=>next(),seekto:d=>{if(d.seekTime!==undefined)seek(d.seekTime*1000,!!d.fastSeek);},seekbackward:d=>seek(positionMs.peek()-(d.seekOffset||10)*1000),seekforward:d=>seek(positionMs.peek()+(d.seekOffset||10)*1000)});
 const online=()=>engine.online(),pagehide=()=>engine.pagehide();addEventListener('online',online);addEventListener('pagehide',pagehide);
 if(import.meta.hot)import.meta.hot.dispose(()=>{removeHandlers();removeEventListener('online',online);removeEventListener('pagehide',pagehide);engine.dispose();});

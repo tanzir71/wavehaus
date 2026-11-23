@@ -1,0 +1,18 @@
+import {signal} from '@preact/signals';
+import * as player from './player';
+import type {Track} from '../api/types';
+export interface BackgroundResult {pass:boolean;ua:string;at:number;elapsed:number;progress:number;hiddenMs:number}
+export const backgroundCheck=signal<{running:boolean;message:string;hiddenSeconds:number}>({running:false,message:'',hiddenSeconds:0});
+export function savedBackgroundResult():BackgroundResult|null{try{const value=JSON.parse(localStorage.getItem('wh-bg-test')||'null');return value&&typeof value.pass==='boolean'&&Number.isFinite(value.at)?{...value,pass:value.pass&&Number(value.hiddenMs)>=30000}:null;}catch{return null;}}
+let cleanup:(()=>void)|null=null;
+export function cancelBackgroundCheck(){cleanup?.();cleanup=null;backgroundCheck.value={running:false,message:'Test cancelled.',hiddenSeconds:0};}
+export function startBackgroundCheck(){
+ if(backgroundCheck.value.running)return;const saved=player.playbackSnapshot();player.pause();const sleep=player.sleepState.peek();player.sleep(null);let began=0,hiddenAt=0,hiddenMs=0,finished=false;
+ const finish=(message:string,result?:BackgroundResult)=>{if(finished)return;finished=true;clearInterval(timer);document.removeEventListener('visibilitychange',visibility);player.audio.removeEventListener('playing',playing);player.audio.removeEventListener('error',error);cleanup=null;if(player.current.peek()?.id==='background-test')player.endTemporary(saved);if(sleep.track)player.sleep('endOfTrack');else if(sleep.until&&sleep.until>Date.now())player.sleep((sleep.until-Date.now())/60000);backgroundCheck.value={running:false,message,hiddenSeconds:Math.floor(hiddenMs/1000)};if(result){localStorage.setItem('wh-bg-test',JSON.stringify(result));dispatchEvent(new Event('wh-background-result'));}};
+ const playing=()=>{if(!began)began=Date.now()-player.audio.currentTime*1000;},evaluate=()=>{
+  if(finished)return;if(player.current.peek()?.id!=='background-test'){finish('Test cancelled because another track started.');return;}const hidden=hiddenMs+(hiddenAt?Date.now()-hiddenAt:0);backgroundCheck.value={running:true,message:'Lock your phone for at least 30 seconds, then come back after the chime.',hiddenSeconds:Math.floor(hidden/1000)};if(!began||document.hidden)return;
+  const elapsed=(Date.now()-began)/1000,progress=player.audio.currentTime,duration=Number.isFinite(player.audio.duration)?player.audio.duration:45;if(hidden<30000&&player.audio.ended){finish('Keep the phone locked for at least 30 seconds, then start the test again.');return;}if(elapsed<30||hidden<30000)return;const ended=player.audio.ended||progress>=duration-.3,pass=Math.abs(Math.min(duration,elapsed)-progress)<3&&(!player.audio.paused||ended);hiddenMs=hidden;finish(pass?'Background play works on this device.':`Playback stopped after ${Math.round(progress)}s. Check that Background play is on, then try again.`,{pass,ua:navigator.userAgent,at:Date.now(),elapsed,progress,hiddenMs:hidden});
+ };
+ const visibility=()=>{if(document.hidden){if(!hiddenAt)hiddenAt=Date.now();}else{if(hiddenAt)hiddenMs+=Date.now()-hiddenAt;hiddenAt=0;evaluate();}},error=()=>finish('Could not play the chime. Connect to your server and try again.');
+ player.audio.addEventListener('playing',playing);player.audio.addEventListener('error',error);document.addEventListener('visibilitychange',visibility);const timer=setInterval(evaluate,1000);cleanup=()=>finish('Test cancelled.');backgroundCheck.value={running:true,message:'Lock your phone for at least 30 seconds, then come back after the chime.',hiddenSeconds:0};player.play({id:'background-test',title:'Background play test',artist_name:'Wavehaus',album_title:'Screen off. Still playing.',album_id:'background-test',duration_ms:45000,peaks:null} as Track);
+}

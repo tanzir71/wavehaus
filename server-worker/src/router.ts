@@ -10,7 +10,7 @@ import { playbackRoutes } from './playback';
 import { journalRoutes } from './journal-routes';
 import { metadataRoutes } from './metadata';
 import {visibilityRoutes} from './visibility';
-export const VERSION='0.4.0',SCHEMA=6;
+export const VERSION='0.5.0',SCHEMA=6;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
  if(path==='/api/health'&&method==='GET')return json({ok:true,version:VERSION,schema:SCHEMA,backend:'worker',needsSetup:!await one(env.DB,'SELECT id FROM users LIMIT 1')});
