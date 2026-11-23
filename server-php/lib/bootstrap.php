@@ -4,8 +4,8 @@ declare(strict_types=1);
 // Private-directory discovery, atomic writes and error copy are adapted from
 // the owner's Tack backend/bootstrap.php. See REFERENCES.md for the port map.
 ini_set('display_errors', '0');
-const WH_VERSION = '0.6.0';
-const WH_SCHEMA = 7;
+const WH_VERSION = '0.7.0';
+const WH_SCHEMA = 8;
 
 final class ApiException extends RuntimeException {
     public function __construct(public string $errorCode, string $message, int $status = 400, public ?int $retryAfter = null, public ?array $conflicts = null) { parent::__construct($message, $status); }

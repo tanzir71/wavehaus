@@ -24,6 +24,7 @@ export interface EngineOptions {
  ios?:boolean;
  deviceLabel?:string;
  warm?:(url:string|null)=>void;
+ unavailable?:(track:Track)=>Promise<boolean>;
 }
 interface Session {id:string;track:Track;startedAt:number;listened:number;context:string;lastTime:number;lastClock:number}
 
@@ -60,6 +61,7 @@ export class AudioEngine {
  private interval:ReturnType<typeof setInterval>;
  private pendingSeek:number|null=null;
  private session:Session|null=null;
+ private ownerId:string|null=null;
  private recent=new Map<string,number>();
  private historyReady=false;
  private refillPending=false;
@@ -92,12 +94,12 @@ export class AudioEngine {
  private publishPosition(){this.options.media.position(this.durationMs,this.positionMs,this.options.audio.playbackRate);}
  private readBuffered(){const a=this.options.audio;try{this.bufferedMs=a.buffered.length?a.buffered.end(a.buffered.length-1)*1000:0;}catch{this.bufferedMs=0;}}
  configure(userId:string|null){
-  this.clear();this.epoch++;this.recommendationsPending=false;this.options.persistence.configure(userId);this.options.listening.configure(userId);this.historyReady=false;this.recent.clear();
+  this.clear();this.epoch++;this.ownerId=userId;this.recommendationsPending=false;this.options.persistence.configure(userId);this.options.listening.configure(userId);this.historyReady=false;this.recent.clear();
   if(userId){this.options.listening.flush();const epoch=this.epoch;void this.options.listening.recent(this.now()-7200000).then(rows=>{if(epoch!==this.epoch)return;for(const row of rows)this.recent.set(row.trackId,Math.max(this.recent.get(row.trackId)||0,row.startedAt));this.historyReady=true;this.prepareNext();}).catch(()=>{if(epoch===this.epoch){this.historyReady=true;this.prepareNext();}});}
  }
  setCatalog(tracks:Track[]){
   const previous=this.current;this.catalog=new Map(tracks.filter(t=>!t.deleted).map(t=>[t.id,t]));this.urls=new Map([...this.catalog.values()].map(t=>[t.id,this.options.url(t)]));
-  if(!this.temporary){this.queue.refresh(this.catalog);if(previous&&!this.current){this.pause();this.finish('unavailable');this.options.audio.removeAttribute('src');this.options.audio.load();this.positionMs=0;this.options.media.track(null);}else if(this.current)this.options.media.track(this.current);}
+  if(!this.temporary){this.queue.refresh(this.catalog);if(previous&&!this.current){const playing=this.wanted;this.finish('unavailable');const next=this.queue.advance('unsupported');if(next)this.select(next,0,playing);else{this.pause();this.options.audio.removeAttribute('src');this.options.audio.load();this.positionMs=0;this.options.media.track(null);}this.error=previous.owner_id!==this.ownerId?'A track is no longer shared.':'A track is no longer available.';}else if(this.current)this.options.media.track(this.current);}
   this.queueRevision++;this.prepareNext();this.changed();
  }
  async restore(){
@@ -188,7 +190,7 @@ export class AudioEngine {
  private watchStall(){if(!this.wanted||this.options.audio.ended||this.stall||this.recovery)return;this.state='loading';this.changed();this.stall=setTimeout(()=>{this.stall=undefined;if(this.wanted)this.recover();},8000);}
  private clearStall(){clearTimeout(this.stall);this.stall=undefined;}
  private cancelRecovery(){this.clearStall();clearTimeout(this.recovery);this.recovery=undefined;}
- private failed(){if(!this.wanted)return;const code=this.options.audio.error?.code;if(!code)return;if(code===2)this.recover();else if(code===3||code===4)this.unsupportedCurrent();else{this.wanted=false;this.state='error';this.error='Playback stopped. Tap Play to try again.';this.changed();}}
+ private failed(){if(!this.wanted)return;const code=this.options.audio.error?.code;if(!code)return;const track=this.current,generation=this.generation;if(track&&this.options.unavailable){void this.options.unavailable(track).then(unavailable=>{if(unavailable&&generation===this.generation)this.setCatalog([...this.catalog.values()].filter(row=>row.id!==track.id));}).catch(()=>{});}if(code===2)this.recover();else if(code===3||code===4)this.unsupportedCurrent();else{this.wanted=false;this.state='error';this.error='Playback stopped. Tap Play to try again.';this.changed();}}
  private unsupportedCurrent(){
   const track=this.current;if(!track)return;this.unsupported.add(track.id);this.queueRevision++;this.error=`${track.title} can’t play on this device.`;this.next('unsupported');
  }

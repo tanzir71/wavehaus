@@ -17,6 +17,7 @@ require_once $lib.'/journal.php';
 require_once $lib.'/metadata.php';
 require_once $lib.'/visibility.php';
 require_once $lib.'/playlists.php';
+require_once $lib.'/access.php';
 require_once $lib.'/router.php';
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');

@@ -33,3 +33,5 @@ export async function bootLibrary(){
 }
 setInterval(()=>{if(authStatus.value==='signedIn'&&document.visibilityState==='visible')sync().catch(()=>{});},30000);
 addEventListener('focus',()=>{if(authStatus.value==='signedIn')sync().catch(()=>{});});
+
+addEventListener('wh-media-forbidden',event=>{const detail=(event as CustomEvent<{id:string;status:number}>).detail,id=detail.id,data=library.value;toast(detail.status===403?'A track is no longer shared.':'A track is no longer available.');library.value={...data,tracks:data.tracks.filter(row=>row.id!==id),playlistItems:data.playlistItems.filter(row=>row.track_id!==id),likes:data.likes.filter(row=>row.track_id!==id),moments:data.moments.filter(row=>row.track_id!==id)};navigator.serviceWorker?.controller?.postMessage({type:'PURGE_TRACKS',ids:[id]});void sync().catch(()=>{});});

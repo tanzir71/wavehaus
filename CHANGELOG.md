@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.0 — M7 · 2026-11-24
+
+A library with people you choose.
+
+- Track, album, playlist, folder and mixed-selection privacy use one guarded action, impact previews and public confirmation. Playlist publishing changes only your own selected tracks; future publishing stays opt-in.
+- Folder defaults follow future uploads. Republishing refreshes playlist relationships for delta sync; private transitions purge local audio, remove queue entries and advance playback.
+- Access settings offer Closed, Invite only, Request access and Open modes, member roles and quotas, referrals, one-time invitations, approval links and password-protected ownership transfer.
+- Self-hosted signed proof-of-work, one-use claims, a honeypot, a three-second fill time, rate limits and a bundled disposable-domain list protect registration without a required email.
+- PHP, Worker and demo implement the access flows. Admin takedowns remain private-only and appear in the uploader's Activity.
+
+Publication builds only, as requested. No dependency was added. Schema 8 preserves existing data and change history.
+
 ## v0.6.0 — M6 · 2026-11-24
 
 Find a favourite. Follow the next one.
