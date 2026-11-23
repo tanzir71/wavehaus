@@ -22,6 +22,7 @@ export async function sync(){if(!user.value)return;if(syncing)return syncing;con
   }
   for(const key of ['tracks','albums','playlists'] as const)next[key]=next[key].filter(r=>!delta.hidden[key].includes(r.id)) as never;
   const hidden=[...delta.hidden.tracks,...delta.items.tracks.filter(row=>row.deleted).map(row=>row.id)];if(hidden.length){navigator.serviceWorker?.controller?.postMessage({type:'PURGE_TRACKS',ids:hidden});next.playlistItems=next.playlistItems.filter(row=>!hidden.includes(row.track_id));next.likes=next.likes.filter(row=>!hidden.includes(row.track_id));next.moments=next.moments.filter(row=>!hidden.includes(row.track_id));}
+  const removedPlaylists=new Set([...delta.hidden.playlists,...delta.items.playlists.filter(row=>row.deleted).map(row=>row.id)]);if(removedPlaylists.size)next.playlistItems=next.playlistItems.filter(row=>!removedPlaylists.has(row.playlist_id));
   if(!delta.more){const usedArtists=new Set([...next.tracks,...next.albums].map(row=>row.artist_id));next.artists=next.artists.filter(row=>usedArtists.has(row.id));}
   library.value=next;rev=delta.rev;more=delta.more;
  }if(epoch===syncEpoch&&user.value?.id===userId)await set(`user:${userId}`,{rev,library:library.value},cache);

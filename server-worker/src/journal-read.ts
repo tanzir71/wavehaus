@@ -41,7 +41,7 @@ export async function readJournalRows(env:Env,ops:JournalOp[]){
  const queries:Statement[]=[],queryTables:JournalTable[]=[],costQueries:Statement[]=[];
  for(const table of tables){
   const selected=ops.filter(op=>op.table===table);if(!selected.length)continue;
-  const columns=new Set(['id','rev','deleted',...(table==='artists'?[]:['owner_id','visibility']),...(table==='tracks'?['album_id','artist_id']:table==='albums'?['artist_id']:[])]);
+  const columns=new Set(['id','rev','deleted',...(table==='artists'?[]:table==='playlist_items'?['owner_id','playlist_id','track_id']:['owner_id','visibility']),...(table==='tracks'?['album_id','artist_id']:table==='albums'?['artist_id']:[])]);
   for(const op of selected)for(const column of [...Object.keys(op.before||{}),...Object.keys(op.after)])if(journalColumns[table].includes(column))columns.add(column);
   const fields=[...columns];let rowJson=`json_object(${fields.slice(0,16).map(column=>`'${column}',"${column}"`).join(',')})`;
   for(let start=16;start<fields.length;start+=15)rowJson=`json_set(${rowJson},${fields.slice(start,start+15).map(column=>`'$.${column}',"${column}"`).join(',')})`;

@@ -17,7 +17,7 @@ export function playerInput(input:Record<string,unknown>,maxIds=2000):PlayerSnap
   if(context.length+manual.length+automatic.length>maxIds*2)invalid('This queue is too large to save.');if(s.current!==null&&(typeof s.current!=='string'||!ulid.test(s.current)))invalid('Invalid current track.');
   if(!Array.isArray(s.history)||s.history.length>100)invalid('Invalid queue history.');
   const history=s.history.map(entry=>{if(!entry||typeof entry!=='object'||typeof entry.id!=='string'||!ulid.test(entry.id))invalid('Invalid queue history.');return {id:entry.id as string,source:source(entry.source)};});
-  result.sections={context,remaining,manual,automatic,history,current:s.current as string|null,currentSource:source(s.currentSource),contextLabel:text(s.contextLabel,'Context name',200)||'Your library',contextType:text(s.contextType,'Playback context',512)||'library',shuffle:result.shuffle,repeat:result.repeat,autoplay:result.autoplay};
+  result.sections={smartShuffle:boolean(s.smartShuffle,'Smart shuffle'),smart:s.smart===undefined?[]:ids(s.smart,'Smart shuffle suggestions',maxIds),context,remaining,manual,automatic,history,current:s.current as string|null,currentSource:source(s.currentSource),contextLabel:text(s.contextLabel,'Context name',200)||'Your library',contextType:text(s.contextType,'Playback context',512)||'library',shuffle:result.shuffle,repeat:result.repeat,autoplay:result.autoplay};
  }
  return result;
 }

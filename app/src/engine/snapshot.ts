@@ -11,5 +11,5 @@ export function cloudSnapshot(value:PlayerSnapshot,max=2000):PlayerSnapshot {
  const automatic=sections.autoplay&&sections.repeat==='off'?sections.automatic.slice(0,budget):[];
  const contextIds=new Set([...history.filter(entry=>entry.source==='context').map(entry=>entry.id),...(current?[current]:[]),...remaining]),context=sections.context.filter(id=>contextIds.has(id)).slice(0,max);
  const queue=[...history.map(entry=>entry.id),...(current?[current]:[]),...manual,...remaining,...automatic];
- return {...value,queue,index:current?history.length:0,sections:{...sections,history,context,manual,remaining,automatic}};
+ return {...value,queue,index:current?history.length:0,sections:{...sections,history,context,manual,remaining,automatic,smart:(sections.smart||[]).filter(id=>remaining.includes(id))}};
 }

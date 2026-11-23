@@ -12,8 +12,9 @@ Source of truth: the unmodified files in `/handover`.
 - Landing correction — Shipped: PR #4, v0.2.1 and Pages verified at 412 and 1920 px. See `landing-fix-verification.md`.
 - M3 — Shipped: PR #5, tag/release `v0.3.0`, PR CI, Pages and release checks green. Queue restoration, generated Media Session artwork and installability were checked on the live preview.
 - M4 — Shipped: PR #6, v0.4.0, release archives and Pages published.
-- M5 — Implemented: Brave setup, phone hints, handoff/shortcuts and saved background-check status. Publishing v0.5.0.
-- M6–M10 — Pending, in the order defined in `/handover/TASKS.md`.
+- M5 — Shipped: PR #7, v0.5.0, release archives and Pages published.
+- M6 — Implemented: worker search, library views, playlist CRUD/reorder/Undo, daily recommendations, radio/autoplay and smart shuffle. Publishing v0.6.0.
+- M7–M10 — Pending, in the order defined in `/handover/TASKS.md`.
 
 ## Verification boundaries
 
@@ -38,7 +39,7 @@ Tack located at `C:/Users/tanzir/Desktop/project_priority/project-priority`. Rea
 ## Remaining acceptance
 
 - Physical Brave/Chrome/iPhone screen-lock and OS share-target checks remain unverified; viewport emulation does not establish those results.
-- M4–M10 remain pending. Production upload and authenticated media endpoints are implemented.
+- M7–M10 remain pending. Production upload and authenticated media endpoints are implemented.
 - The 23 November scope correction removes the visitor website and anonymous media access. Production builds default to `/` and support `APP_BASE`; Pages retains `/wavehaus/app/`.
 
 ## M1 verification

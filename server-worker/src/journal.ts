@@ -4,7 +4,7 @@ import {stmt} from './db';
 import {fail} from './http';
 import type {Auth,Env,Statement} from './types';
 export type {RowGuard,CountGuard,JournalWrite} from '../../shared/journal';
-const tables:JournalTable[]=['artists','albums','tracks'];
+const tables:JournalTable[]=['artists','albums','tracks','playlists','playlist_items'];
 const encoder=new TextEncoder();
 function chunks<T>(rows:T[]){
  const groups:T[][]=[];let group:T[]=[],size=2;
@@ -16,14 +16,14 @@ const quote=(name:string)=>'"'+name+'"'; // Names only come from journalColumns.
 
 /** Every write, including its journal, is conditional on one atomic gate. */
 export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
- if(auth.user.role==='listener')fail('forbidden','Your account cannot edit library metadata.',403);
+ const playlistOnly=plan.ops.every(op=>op.table==='playlists'||op.table==='playlist_items');if(auth.user.role==='listener'&&!playlistOnly)fail('forbidden','Your account cannot edit library metadata.',403);
  if(plan.ops.length>10000||(plan.undoIds?.length||0)>2000)fail('too_large','Choose fewer records at once.',413);
  let journalBytes=0;for(const op of plan.ops){journalBytes+=encoder.encode(JSON.stringify(op)).byteLength;if(journalBytes>16*1024**2)fail('too_large','This edit needs too much undo data. Choose fewer rows.',413);}
  if(!plan.ops.length&&!plan.undoIds?.length)return {changeId:plan.appendTo||null,updated:0};
  if(new Set(plan.ops.map(op=>op.table+':'+op.id)).size!==plan.ops.length)throw new Error('Consolidate repeated record operations before committing.');
  const now=Date.now(),gate=ulid(),changeId=plan.appendTo||ulid(),guardExists='EXISTS(SELECT 1 FROM mutation_guards WHERE id=?)';
  const guards=plan.guards||plan.ops.flatMap(op=>op.before?[{table:op.table,id:op.id,rev:op.before.rev}]:[]);
- const conditions=["u.id=? AND u.status='active' AND u.role IN ('owner','admin','uploader')"],parameters:unknown[]=[auth.user.id];
+ const conditions=["u.id=? AND u.status='active' AND (u.role IN ('owner','admin','uploader') OR(u.role='listener' AND ?=1))"],parameters:unknown[]=[auth.user.id,playlistOnly?1:0];
  for(const table of tables){
   const expected=guards.filter(row=>row.table===table).map(({id,rev})=>({id,rev}));
   if(expected.length){
@@ -36,7 +36,7 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
   }
  }
  const countGroups=new Map<string,CountGuard[]>();for(const guard of plan.counts||[]){
-  if(!['tracks','albums'].includes(guard.table)||!['album_id','artist_id'].includes(guard.column)||guard.table==='albums'&&guard.column!=='artist_id')throw new Error('Invalid reference guard.');
+  if(!(guard.table==='tracks'&&['album_id','artist_id'].includes(guard.column)||guard.table==='albums'&&guard.column==='artist_id'||guard.table==='playlist_items'&&guard.column==='playlist_id'))throw new Error('Invalid reference guard.');
   const key=guard.table+':'+guard.column,group=countGroups.get(key)||[];group.push(guard);countGroups.set(key,group);
  }
  for(const group of countGroups.values()){const first=group[0];conditions.push(`NOT EXISTS(SELECT 1 FROM json_each(?) g WHERE (SELECT COUNT(*) FROM ${first.table} r WHERE r.${first.column}=json_extract(g.value,'$.id') AND r.deleted=0)<>json_extract(g.value,'$.count'))`);parameters.push(JSON.stringify(group.map(({id,count})=>({id,count}))));}
@@ -49,7 +49,7 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
  for(const table of tables){
   const indexed=plan.ops.map((op,index)=>({...op,index})).filter(op=>op.table===table);
   for(const creating of [true,false])for(const group of chunks(indexed.filter(op=>!op.before===creating))){
-   const allowed=journalColumns[table],columns=allowed.filter(column=>group.some(op=>Object.hasOwn(op.after,column)));
+   const allowed=journalColumns[table],columns=allowed.filter(column=>(creating||column!=='updated_at')&&group.some(op=>Object.hasOwn(op.after,column)));
    const payload=group.map(op=>({id:op.id,index:op.index,patch:Object.fromEntries(columns.filter(column=>Object.hasOwn(op.after,column)).map(column=>[column,op.after[column]]))}));
    if(creating){
     // Creation planners provide the same required fields for every new row in
@@ -59,8 +59,8 @@ export async function writeJournal(env:Env,auth:Auth,plan:JournalWrite){
     statements.push(stmt(env.DB,`INSERT INTO ${table}(${names.map(quote).join(',')}) SELECT ${values.join(',')} FROM json_each(?) j WHERE ${guardExists}`,JSON.stringify(payload),gate));
    }else{
     const setters=columns.map(column=>`${quote(column)}=CASE WHEN json_type(j.value,'$.patch.${column}') IS NOT NULL THEN json_extract(j.value,'$.patch.${column}') ELSE r.${quote(column)} END`);
-    setters.push('rev='+revision("json_extract(j.value,'$.index')"));if(table==='tracks')setters.push('updated_at='+now);
-    if(table!=='artists')setters.push(`hidden_rev=CASE WHEN r.visibility='public' AND CASE WHEN json_type(j.value,'$.patch.visibility') IS NOT NULL THEN json_extract(j.value,'$.patch.visibility') ELSE r.visibility END='private' THEN ${revision("json_extract(j.value,'$.index')")} ELSE r.hidden_rev END`);
+    setters.push('rev='+revision("json_extract(j.value,'$.index')"));if(table==='tracks'||table==='playlists')setters.push('updated_at='+now);
+    if(['tracks','albums','playlists'].includes(table))setters.push(`hidden_rev=CASE WHEN r.visibility='public' AND CASE WHEN json_type(j.value,'$.patch.visibility') IS NOT NULL THEN json_extract(j.value,'$.patch.visibility') ELSE r.visibility END='private' THEN ${revision("json_extract(j.value,'$.index')")} ELSE r.hidden_rev END`);
     statements.push(stmt(env.DB,`UPDATE ${table} AS r SET ${setters.join(',')} FROM json_each(?) j WHERE r.id=json_extract(j.value,'$.id') AND ${guardExists}`,JSON.stringify(payload),gate));
    }
   }

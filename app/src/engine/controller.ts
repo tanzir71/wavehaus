@@ -30,6 +30,10 @@ interface Session {id:string;track:Track;startedAt:number;listened:number;contex
 // All playback work stays outside UI components. In particular, ended never
 // waits for storage, metadata, recommendation computation or a network request.
 export class AudioEngine {
+ private recommendationSource?: (seed:Track,n:number,excluded:string[],lastArtists:string[])=>Promise<Track[]>;
+ private recommendationsPending=false;
+ setRecommendationSource(source:(seed:Track,n:number,excluded:string[],lastArtists:string[])=>Promise<Track[]>){this.recommendationSource=source;this.prepareNext();}
+ recentPlayedIds(){return [...this.recent].filter(([,at])=>at>this.now()-7200000).map(([id])=>id);}
  readonly queue=new PlaybackQueue();
  readonly unsupported=new Set<string>();
  queueRevision=0;
@@ -88,7 +92,7 @@ export class AudioEngine {
  private publishPosition(){this.options.media.position(this.durationMs,this.positionMs,this.options.audio.playbackRate);}
  private readBuffered(){const a=this.options.audio;try{this.bufferedMs=a.buffered.length?a.buffered.end(a.buffered.length-1)*1000:0;}catch{this.bufferedMs=0;}}
  configure(userId:string|null){
-  this.clear();this.epoch++;this.options.persistence.configure(userId);this.options.listening.configure(userId);this.historyReady=false;this.recent.clear();
+  this.clear();this.epoch++;this.recommendationsPending=false;this.options.persistence.configure(userId);this.options.listening.configure(userId);this.historyReady=false;this.recent.clear();
   if(userId){this.options.listening.flush();const epoch=this.epoch;void this.options.listening.recent(this.now()-7200000).then(rows=>{if(epoch!==this.epoch)return;for(const row of rows)this.recent.set(row.trackId,Math.max(this.recent.get(row.trackId)||0,row.startedAt));this.historyReady=true;this.prepareNext();}).catch(()=>{if(epoch===this.epoch){this.historyReady=true;this.prepareNext();}});}
  }
  setCatalog(tracks:Track[]){
@@ -145,6 +149,7 @@ export class AudioEngine {
  remove(key:string){this.queue.remove(key);this.queueChanged();}
  reorder(key:string,to:number){this.queue.reorder(key,to);this.queueChanged();}
  clearManual(){this.queue.clearManual();this.queueChanged();}
+ setSmartShuffle(enabled:boolean){this.queue.smartShuffle=enabled;if(!enabled)this.queue.removeSmart();this.queueChanged();}
  setShuffle(enabled:boolean){this.queue.setShuffle(enabled);this.queueChanged();}
  setRepeat(mode:RepeatMode){this.queue.repeat=mode;this.queueChanged();}
  setAutoplay(enabled:boolean){this.queue.autoplay=enabled;this.queueChanged();}
@@ -216,10 +221,12 @@ export class AudioEngine {
  private prepareNext(){
   if(this.refillPending)return;this.refillPending=true;const epoch=this.epoch;
   queueMicrotask(()=>{this.refillPending=false;if(epoch!==this.epoch||!this.current||this.temporary)return;
-   if(this.historyReady&&this.queue.autoplay&&this.queue.repeat==='off'&&this.queue.automatic.length<=3){
-    const excluded=new Set([...this.queue.timeline.map(e=>e.track.id),...this.unsupported]);for(const[id,at]of this.recent)if(at>this.now()-7200000)excluded.add(id);
-    const candidates=[...this.catalog.values()].filter(t=>!excluded.has(t.id));const next=shuffleTracks(candidates,this.now()>>>0,this.current.artist_name).slice(0,10-this.queue.automatic.length);
-    if(next.length){this.queue.addAutomatic(next,'From your library');this.queueRevision++;this.persist(false);this.changed();}
+   const smart=this.queue.smartShuffle&&!this.queue.remaining.some(entry=>entry.reason==='Smart shuffle')&&this.queue.remaining.filter(entry=>entry.source==='context').length>=5;
+   if(this.historyReady&&(smart||this.queue.autoplay&&this.queue.repeat==='off'&&this.queue.automatic.length<=3)&&!this.recommendationsPending){
+    const seed=this.current,excluded=new Set([...this.queue.timeline.map(entry=>entry.track.id),...this.unsupported,...this.recentPlayedIds()]),wanted=smart?Math.min(20,Math.floor(this.queue.remaining.length/5)):10-this.queue.automatic.length;
+    const apply=(tracks:Track[])=>{if(epoch!==this.epoch||this.temporary||this.current?.id!==seed.id)return;const blocked=new Set([...this.queue.timeline.map(entry=>entry.track.id),...this.unsupported,...this.recentPlayedIds()]),next=tracks.filter(track=>this.catalog.has(track.id)&&!blocked.has(track.id)).slice(0,wanted);if(!next.length)return;if(smart){if(!this.queue.smartShuffle)return;this.queue.injectSmart(next);}else{if(!this.queue.autoplay||this.queue.repeat!=='off')return;this.queue.addAutomatic(next,'Because you played '+seed.artist_name);}this.queueRevision++;this.persist(false);this.changed();};
+    if(this.recommendationSource){this.recommendationsPending=true;void this.recommendationSource(seed,wanted,[...excluded],this.queue.history.slice(-2).map(entry=>entry.track.artist_name)).then(apply).catch(()=>{}).finally(()=>{if(epoch===this.epoch)this.recommendationsPending=false;});}
+    else apply(shuffleTracks([...this.catalog.values()].filter(track=>!excluded.has(track.id)),this.now()>>>0,seed.artist_name));
    }
    if(this.options.warm){
     const next=this.queue.upcoming[0]?.track;
@@ -246,7 +253,7 @@ export class AudioEngine {
  private expireSleep(){this.pause();this.sleep(null);}
  clear(){
   this.persist(true);this.finish('signout',false);this.wanted=false;this.generation++;this.cancelRecovery();this.sleep(null);this.options.warm?.(null);
-  const a=this.options.audio;a.pause();a.removeAttribute('src');a.load();a.preload='none';this.queue.current=null;this.queue.history=[];this.queue.manual=[];this.queue.remaining=[];this.queue.automatic=[];this.queue.canonical=[];this.queueRevision++;this.positionMs=0;this.bufferedMs=0;this.pendingSeek=null;this.state='paused';this.error='';this.interrupted=false;this.temporary=false;this.loop=null;this.options.media.track(null);this.changed();
+  const a=this.options.audio;a.pause();a.removeAttribute('src');a.load();a.preload='none';this.queue.current=null;this.queue.history=[];this.queue.manual=[];this.queue.remaining=[];this.queue.automatic=[];this.queue.canonical=[];this.queue.smartShuffle=false;this.queueRevision++;this.positionMs=0;this.bufferedMs=0;this.pendingSeek=null;this.state='paused';this.error='';this.interrupted=false;this.temporary=false;this.loop=null;this.options.media.track(null);this.changed();
  }
  dispose(){this.events.abort();clearInterval(this.interval);this.cancelRecovery();clearTimeout(this.sleeper);this.options.warm?.(null);this.options.persistence.dispose();this.options.listening.dispose();}
 }

@@ -31,6 +31,7 @@ export class PlaybackQueue {
  shuffle=false;
  repeat:RepeatMode='off';
  autoplay=true;
+ smartShuffle=false;
  private serial=0;
  private seed=0;
  private entry(track:Track,source:QueueSource,reason?:string):QueueEntry{return {key:`${source}-${++this.serial}`,track,source,reason};}
@@ -45,11 +46,13 @@ export class PlaybackQueue {
  get timeline(){return [...this.history,...(this.current?[this.current]:[]),...this.upcoming];}
  add(tracks:Track[]){this.manual.push(...tracks.map(track=>this.entry(track,'queue')));}
  addAutomatic(tracks:Track[],reason:string){this.automatic.push(...tracks.map(track=>this.entry(track,'autoplay',reason)));}
+ removeSmart(){this.remaining=this.remaining.filter(entry=>entry.reason!=='Smart shuffle');}
+ injectSmart(tracks:Track[]){const used=new Set(this.timeline.map(entry=>entry.track.id)),pool=tracks.filter(track=>!used.has(track.id));let count=0;this.remaining=this.remaining.flatMap(entry=>{const result=[entry];if(entry.source==='context'&&++count%5===0&&pool.length)result.push(this.entry(pool.shift()!,'autoplay','Smart shuffle'));return result;});}
  remove(key:string){this.manual=this.manual.filter(entry=>entry.key!==key);this.remaining=this.remaining.filter(entry=>entry.key!==key);this.automatic=this.automatic.filter(entry=>entry.key!==key);}
  reorder(key:string,to:number){const from=this.manual.findIndex(entry=>entry.key===key);if(from<0)return;const [entry]=this.manual.splice(from,1);this.manual.splice(Math.max(0,Math.min(this.manual.length,to)),0,entry);}
  clearManual(){this.manual=[];}
  setShuffle(enabled:boolean){
-  if(this.shuffle===enabled)return;this.shuffle=enabled;if(!this.current)return;
+  if(this.shuffle===enabled)return;this.removeSmart();this.shuffle=enabled;if(!this.current)return;
   if(enabled)this.remaining=shuffleTracks(this.remaining.map(entry=>entry.track),++this.seed,this.current.track.artist_name).map(track=>this.entry(track,'context'));
   else{const pool=[...this.remaining],ordered:QueueEntry[]=[];for(const track of this.canonical){const at=pool.findIndex(entry=>entry.track.id===track.id);if(at>=0)ordered.push(...pool.splice(at,1));}this.remaining=[...ordered,...pool];}
  }
@@ -79,10 +82,10 @@ export class PlaybackQueue {
   this.history=visible(this.history);this.manual=visible(this.manual);this.remaining=visible(this.remaining);this.automatic=visible(this.automatic);this.canonical=this.canonical.flatMap(track=>catalog.get(track.id)||[]);
   if(this.current){const track=catalog.get(this.current.track.id);if(track)this.current={...this.current,track};else this.current=null;}
  }
- save():SavedQueue{return {context:this.canonical.map(track=>track.id),remaining:this.remaining.map(entry=>entry.track.id),manual:this.manual.map(entry=>entry.track.id),automatic:this.automatic.map(entry=>entry.track.id),history:this.history.map(entry=>({id:entry.track.id,source:entry.source})),current:this.current?.track.id||null,currentSource:this.current?.source||'context',contextLabel:this.contextLabel,contextType:this.contextType,shuffle:this.shuffle,repeat:this.repeat,autoplay:this.autoplay};}
+ save():SavedQueue{return {context:this.canonical.map(track=>track.id),remaining:this.remaining.map(entry=>entry.track.id),manual:this.manual.map(entry=>entry.track.id),automatic:this.automatic.map(entry=>entry.track.id),history:this.history.map(entry=>({id:entry.track.id,source:entry.source})),current:this.current?.track.id||null,currentSource:this.current?.source||'context',contextLabel:this.contextLabel,contextType:this.contextType,shuffle:this.shuffle,repeat:this.repeat,autoplay:this.autoplay,smartShuffle:this.smartShuffle,smart:this.remaining.filter(entry=>entry.reason==='Smart shuffle').map(entry=>entry.track.id)};}
  restore(saved:SavedQueue,catalog:Map<string,Track>){
   const tracks=(ids:string[])=>ids.flatMap(id=>catalog.get(id)||[]),entries=(ids:string[],source:QueueSource)=>tracks(ids).map(track=>this.entry(track,source));
-  this.canonical=tracks(saved.context);this.remaining=entries(saved.remaining,'context');this.manual=entries(saved.manual,'queue');this.automatic=entries(saved.automatic,'autoplay');this.history=saved.history.flatMap(entry=>{const track=catalog.get(entry.id);return track?[this.entry(track,entry.source)]:[];}).slice(-100);this.contextLabel=saved.contextLabel;this.contextType=saved.contextType;this.shuffle=saved.shuffle;this.repeat=saved.repeat;this.autoplay=saved.autoplay;
+  this.canonical=tracks(saved.context);this.smartShuffle=!!saved.smartShuffle;const smart=new Set(saved.smart||[]);this.remaining=entries(saved.remaining,'context').map(entry=>smart.has(entry.track.id)?{...entry,source:'autoplay' as const,reason:'Smart shuffle'}:entry);this.manual=entries(saved.manual,'queue');this.automatic=entries(saved.automatic,'autoplay');this.history=saved.history.flatMap(entry=>{const track=catalog.get(entry.id);return track?[this.entry(track,entry.source)]:[];}).slice(-100);this.contextLabel=saved.contextLabel;this.contextType=saved.contextType;this.shuffle=saved.shuffle;this.repeat=saved.repeat;this.autoplay=saved.autoplay;
   const current=saved.current?catalog.get(saved.current):null;this.current=current?this.entry(current,saved.currentSource):null;
   if(!this.current)this.current=this.manual.shift()||this.remaining.shift()||this.automatic.shift()||null;return this.current;
  }

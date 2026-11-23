@@ -16,7 +16,7 @@ export class PlaybackListening implements ListeningHistory {
  private historyKey(scope:string,play:ListeningEvent){return `${scope}history:${String(play.startedAt).padStart(16,'0')}:${play.id}`;}
  record(play:ListeningEvent){
   if(!this.scope)return;const scope=this.scope,epoch=this.epoch;
-  void setMany([[`${scope}pending:${play.id}`,play],[this.historyKey(scope,play),play]],this.store).then(()=>{if(epoch===this.epoch)this.flush();}).catch(()=>{});
+  void setMany([[`${scope}pending:${play.id}`,play],[this.historyKey(scope,play),play]],this.store).then(()=>{if(epoch===this.epoch){this.flush();dispatchEvent(new Event('wh-listening-changed'));}}).catch(()=>{});
  }
  private async scan(prefix:string,limit:number,reverse=false,from=''){
   return this.store('readonly',store=>new Promise<{key:IDBValidKey;value:ListeningEvent}[]>((resolve,reject)=>{
@@ -31,8 +31,8 @@ export class PlaybackListening implements ListeningHistory {
    const rows:ListeningEvent[]=[];for(const row of page.items){if(row.user_id!==userId)continue;try{const play=playsInput({plays:[{id:row.id,trackId:row.track_id,startedAt:row.started_at,msPlayed:row.ms_played,completed:!!row.completed,skipped:!!row.skipped,context:row.context,deviceLabel:row.device_label} ]})[0];rows.push(play as ListeningEvent);}catch{/* Ignore malformed old history. */}}
    if(rows.length)await setMany(rows.map(play=>[this.historyKey(scope,play),play]),this.store);
    cursor=page.nextCursor;if(page.items.length&&Number(page.items.at(-1)!.started_at)<since)break;
-  }while(cursor&&++pages<10);}catch{/* Listening remains local while the server is unavailable. */}
-  if(epoch!==this.epoch)return [];return (await this.scan(scope+'history:',5000,true,String(since).padStart(16,'0'))).map(row=>row.value);
+  }while(cursor&&++pages<40);}catch{/* Listening remains local while the server is unavailable. */}
+  if(epoch!==this.epoch)return [];return (await this.scan(scope+'history:',20000,true,String(since).padStart(16,'0'))).map(row=>row.value);
  }
  flush(pagehide=false){
   if(!this.scope||this.controller)return;const scope=this.scope,epoch=this.epoch,controller=new AbortController();this.controller=controller;
