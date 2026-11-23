@@ -3,6 +3,7 @@ import { id,tint } from '../library/ids';
 import { getBlob,putBlob,rangeResponse } from '../../public/runtime/media.js';
 import { mutate,readState,type DemoState } from './store';
 import { seed } from './seed';
+import { demoAuth,ensureAuth,demoSignedIn } from './auth';
 export { seed };
 const response=(data:unknown,status=200)=>new Response(status===204?null:JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8'}});
 const fail=(code:string,message:string,status=400)=>{throw new ApiError(code,message,status);};
@@ -12,13 +13,14 @@ const columns:Record<string,string>={artist:'artist_name',albumArtist:'album_art
 export async function demoFetch(input:RequestInfo|URL,init?:RequestInit):Promise<Response>{
  const request=input instanceof Request?input:new Request(new URL(String(input),location.origin),init);const url=new URL(request.url),path=url.pathname.replace(/^.*?(\/api\/|\/demo-media\/)/,'$1'),method=request.method;
  try{
- await seed();
- if(path.startsWith('/demo-media/')){const blob=await getBlob(`audio-${path.split('/')[2]}`);return blob?rangeResponse(blob,request):response({error:{code:'not_found',message:'Track not found'}},404);}
+ await seed();await ensureAuth();
+ if(path.startsWith('/demo-media/')){if(!demoSignedIn((await readState())!))fail('unauthenticated','Sign in to continue.',401);const blob=await getBlob(`audio-${path.split('/')[2]}`);return blob?rangeResponse(blob,request):response({error:{code:'not_found',message:'Track not found'}},404);}
  if(!['GET','HEAD'].includes(method)&&request.headers.get('X-Wavehaus')!=='1')return response({error:{code:'csrf',message:'Missing X-Wavehaus header.'}},403);
  const body=()=>request.json();const s=(await readState())!;
- if(path==='/api/health')return response({ok:true,version:'0.0.0',schema:1,backend:'demo',needsSetup:false});
+ if(path==='/api/health')return response({ok:true,version:'0.1.0',schema:2,backend:'demo',needsSetup:false});
  if(path==='/api/config')return response({serverName:s.settings.server_name,registrationMode:s.settings.registration_mode,maxChunkBytes:8*1024*1024,maxFileBytes:2*1024**3,powDifficulty:18,features:{demo:true,uploads:true}});
- if(path==='/api/auth/me')return response({user:s.user,session:{id:'demo',device_label:'This browser · demo'},settings:s.settings});
+ const authentication=await demoAuth(request,path);if(authentication)return authentication;
+ if(!demoSignedIn(s))fail('unauthenticated','Sign in to continue.',401);
  if(path==='/api/library'){
   const since=Number(url.searchParams.get('since')||0);if(!Number.isSafeInteger(since)||since<0)fail('invalid_cursor','Invalid library cursor.');
   const limit=Math.min(2000,Math.max(1,Number(url.searchParams.get('limit')||2000)));const items=emptyLibrary();

@@ -14,7 +14,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - if: github.ref_name == 'v0.0.0'
+        run: npm run build
       - if: github.ref_name != 'v0.0.0'
         run: npm run package
       - env:

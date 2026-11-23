@@ -1,0 +1,3 @@
+import { useMemo } from 'preact/hooks';
+import { qrMatrix } from './qr';
+export function PairQr({url}:{url:string}){const result=useMemo(()=>{try{const matrix=qrMatrix(url);return {path:matrix.flatMap((row,y)=>row.map((dark,x)=>dark?`M${x} ${y}h1v1h-1z`:'')).join(''),error:''};}catch(e){return {path:'',error:(e as Error).message};}},[url]);return result.error?<p>{result.error}</p>:<svg class="pair-qr" width="196" height="196" viewBox="-4 -4 49 49" role="img" aria-label="Pairing QR code" shape-rendering="crispEdges"><rect x="-4" y="-4" width="49" height="49" fill="white"/><path d={result.path} fill="black"/></svg>;}
