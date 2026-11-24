@@ -12,12 +12,13 @@ import type { Analysis,PickedFile } from './types';
 import {createImport,loadImports,recoverImports,imports,recordImportAnalysis,prepareImportFile,recordImportStatus,settleImport} from './imports';
 import type {RuleSettings} from './organise';
 import {navigate} from '../ui/router';
+import type {AlbumDestination} from './destination';
 export interface UploadItem {id:string;batchId?:string;name:string;size:number;status:string;progress:number;part?:number;parts?:number;analysis?:Analysis;track?:Track;album?:Album;error?:string;retryable?:boolean}
 export const uploads=signal<UploadItem[]>([]),uploadBusy=signal(false),keepAwake=signal(localStorage.getItem('wh-upload-awake')!=='false');
 const pending=createStore(`wh-pending-uploads-${api.demo?'demo':'http'}`,'files'),running=new Map<string,AbortController>();
 const scope=()=>`${import.meta.env.BASE_URL}:${user.value?.id}:`,hex=(buffer:ArrayBuffer)=>Array.from(new Uint8Array(buffer),b=>b.toString(16).padStart(2,'0')).join('');
 const update=(id:string,values:Partial<UploadItem>)=>{uploads.value=uploads.value.map(item=>item.id===id?{...item,...values}:item);};
-interface Job {file:File;path:string;owner:string;visibility:Visibility;batchId?:string;rules?:RuleSettings;undoEligible?:boolean;changeId?:string|null;uploadId?:string;hash?:string;quickHash?:string;analysis?:Analysis;sidePicture?:Blob;lyrics?:string;track?:Track;album?:Album;duplicate?:boolean;force?:boolean}
+interface Job {file:File;path:string;owner:string;visibility:Visibility;visibilityOverride?:boolean;batchId?:string;rules?:RuleSettings;undoEligible?:boolean;changeId?:string|null;uploadId?:string;hash?:string;quickHash?:string;analysis?:Analysis;sidePicture?:Blob;lyrics?:string;track?:Track;album?:Album;duplicate?:boolean;force?:boolean}
 let wake:WakeLockSentinel|null=null,wakeRequest=false,paused=false,enqueuing=0,account:string|null=null,decodeQueue=Promise.resolve();
 const aborted=()=>new DOMException('Upload paused.','AbortError');
 const delay=(ms:number,signal:AbortSignal)=>new Promise<void>((resolve,reject)=>{signal.throwIfAborted();const abort=()=>{clearTimeout(timer);reject(aborted());},timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},ms);signal.addEventListener('abort',abort,{once:true});});
@@ -31,19 +32,19 @@ async function maintainWake(){
 effect(()=>{localStorage.setItem('wh-upload-awake',String(keepAwake.value));void maintainWake();});
 addEventListener('visibilitychange',()=>{void maintainWake();});
 effect(()=>{const next=user.value?.id||null;if(account!==next){account=next;for(const controller of running.values())controller.abort();uploads.value=[];paused=false;}});
-export async function intake(input:(File|PickedFile)[],visibility:Visibility='private'){
+export async function intake(input:(File|PickedFile)[],visibility:Visibility='private',options:{destination?:AlbumDestination;visibilityOverride?:boolean}={}){
  const owner=user.value?.id;if(!owner)throw new Error('Sign in before adding music.');
  if(user.value?.role==='listener')throw new Error('Ask the server owner for upload access.');
  if(visibility==='public'&&accountSettings.value.upload_visibility_locked===true)throw new Error('New uploads are locked to Private on this server.');
  const picked=input.map(item=>item instanceof File?{file:item,path:item.webkitRelativePath||item.name}:item),audio=picked.filter(item=>/\.(mp3|flac|m4a|alac|opus|ogg|wav|aiff?)$/i.test(item.file.name));
  const finishBusy=beginBusy();enqueuing++;paused=false;processQueue();try{
- const entryIds=new Map(picked.map(item=>[item,scope()+crypto.randomUUID()])),batchId=await createImport(picked.map(item=>({id:entryIds.get(item)!,filename:item.file.name,path:item.path,size:item.file.size,status:!audio.includes(item)?'Skipped: sidecar or unsupported file':config.value&&item.file.size>config.value.maxFileBytes?'Skipped: too large':'Queued'}))),rules=imports.value.find(batch=>batch.id===batchId)?.rules;
+ const entryIds=new Map(picked.map(item=>[item,scope()+crypto.randomUUID()])),batchId=await createImport(picked.map(item=>({id:entryIds.get(item)!,filename:item.file.name,path:item.path,size:item.file.size,status:!audio.includes(item)?'Skipped: sidecar or unsupported file':config.value&&item.file.size>config.value.maxFileBytes?'Skipped: too large':'Queued'})),options.destination),rules=imports.value.find(batch=>batch.id===batchId)?.rules;
  if(matchMedia('(max-width:768px)').matches&&location.pathname.endsWith('/upload'))navigate('/review');for(const item of picked){
   if(user.value?.id!==owner)return;
   const id=entryIds.get(item)!,supported=audio.includes(item),isSidecar=/\.(lrc|png|jpe?g|webp)$/i.test(item.file.name);
   if(!supported){if(!isSidecar)uploads.value=[...uploads.value,{id,name:item.file.name,size:item.file.size,status:'Skipped: not audio',progress:0}];continue;}
   if(config.value&&item.file.size>config.value.maxFileBytes){uploads.value=[...uploads.value,{id,name:item.file.name,size:item.file.size,status:'Skipped: too large',progress:0,error:`The server accepts files up to ${Math.floor(config.value.maxFileBytes/1024**2)} MB.`}];continue;}
-  const attached=sidecars(item,picked),job:Job={...item,owner,visibility,batchId,rules,sidePicture:attached.picture,lyrics:attached.lyrics?(await attached.lyrics.text()).slice(0,200000):undefined};
+  const attached=sidecars(item,picked),job:Job={...item,owner,visibility,visibilityOverride:options.visibilityOverride??visibility==='public',batchId,rules,sidePicture:attached.picture,lyrics:attached.lyrics?(await attached.lyrics.text()).slice(0,200000):undefined};
   uploads.value=[...uploads.value,{id,batchId,name:item.file.name,size:item.file.size,status:'Saving resume copy',progress:0}];
   try{await set(id,job,pending);}catch(error){update(id,{status:'Failed',error:'Could not save a resume copy. Free browser storage, then choose this file again.'});throw error;}
   if(user.value?.id!==owner)return;update(id,{status:paused?'Paused':'Queued',retryable:paused});processQueue();
@@ -98,7 +99,7 @@ async function run(id:string,signal:AbortSignal){
     let failure:unknown;const parts=await Promise.allSettled([0,1].map(async()=>{try{while(next<=count&&!failure){const n=next++;if(received.has(n))continue;signal.throwIfAborted();const blob=file.slice((n-1)*start.chunkBytes,n*start.chunkBytes),partHash=hex(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()));await retry(()=>api.request(`/api/uploads/${start.uploadId}/parts/${n}`,{method:'PUT',headers:{'Content-Type':'application/octet-stream','X-Wavehaus-Part-SHA256':partHash},body:blob,signal}),signal);received.add(n);progress();}}catch(error){failure=error;throw error;}}));
     const failed=parts.find(result=>result.status==='rejected');if(failed?.status==='rejected')throw failed.reason;
    }
-   update(id,{status:'Verifying upload'});const result=await retry(()=>api.request<{track:Track;album:Album;changeId:string|null}>(`/api/uploads/${start.uploadId}/complete`,{...json({metadata:analysis.metadata,album:analysis.album,peaks:analysis.peaks??null,visibility:job!.visibility}),signal}),signal);job.track=result.track;job.album=result.album;job.changeId=job.undoEligible?result.changeId:null;await persist();insertUpload(result.track,result.album);update(id,result);if(job.batchId)await recordImportStatus(job.batchId,id,{status:'Saving artwork',trackId:result.track.id,albumId:result.album.id},job.changeId);
+   update(id,{status:'Verifying upload'});const result=await retry(()=>api.request<{track:Track;album:Album;changeId:string|null}>(`/api/uploads/${start.uploadId}/complete`,{...json({metadata:analysis.metadata,album:analysis.album,peaks:analysis.peaks??null,visibility:job!.visibility,visibilityOverride:job!.visibilityOverride===true}),signal}),signal);job.track=result.track;job.album=result.album;job.changeId=job.undoEligible?result.changeId:null;await persist();insertUpload(result.track,result.album);update(id,result);if(job.batchId)await recordImportStatus(job.batchId,id,{status:'Saving artwork',trackId:result.track.id,albumId:result.album.id},job.changeId);
   }
   if(job.undoEligible===false){update(id,{status:'Already in library — skipped',progress:1});if(job.batchId)await recordImportStatus(job.batchId,id,{status:'Already in library — skipped'});await del(id,pending);return;}
   const album=job.album!;const current=library.value.albums.find(a=>a.id===album.id)||album;

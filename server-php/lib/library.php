@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+function public_read_path(string $path): bool {return (bool)preg_match('~^/api/(?:library|search|tracks|albums(?:/[0-9A-HJKMNP-TV-Z]{26})?|playlists(?:/[0-9A-HJKMNP-TV-Z]{26}(?:/items)?)?)$~D',$path);}
+function guest_auth(): array {return ['user'=>['id'=>'','role'=>'guest']];}
 function next_rev(PDO $db): int { execute($db,'UPDATE revs SET n=n+1 WHERE id=1');return (int)query_one($db,'SELECT n FROM revs WHERE id=1')['n']; }
 function album_row(PDO $db,string $id): array|false { return query_one($db,'SELECT a.*,COALESCE(a.artist_name,ar.name) AS artist_name FROM albums a LEFT JOIN artists ar ON ar.id=a.artist_id WHERE a.id=?',[$id]); }
 function track_row(PDO $db,string $id): array|false { return query_one($db,'SELECT * FROM tracks WHERE id=?',[$id]); }
@@ -24,8 +26,8 @@ function library_routes(PDO $db,array $auth,string $path,string $method): bool {
         // gets a later revision and is picked up on the next page/poll.
         $queries=[
             'tracks'=>['SELECT t.* FROM tracks t WHERE t.rev>? AND t.rev<=? AND (t.owner_id=? OR t.visibility=\'public\') ORDER BY t.rev',[$since,$revision,$userId]],
-            'albums'=>['SELECT a.*,COALESCE(a.artist_name,ar.name) AS artist_name FROM albums a LEFT JOIN artists ar ON ar.id=a.artist_id WHERE a.rev>? AND a.rev<=? AND (a.owner_id=? OR a.visibility=\'public\') ORDER BY a.rev',[$since,$revision,$userId]],
-            'artists'=>['SELECT ar.* FROM artists ar WHERE ar.rev>? AND ar.rev<=? AND (EXISTS(SELECT 1 FROM tracks t WHERE t.artist_id=ar.id AND (t.owner_id=? OR t.visibility=\'public\')) OR EXISTS(SELECT 1 FROM albums a WHERE a.artist_id=ar.id AND (a.owner_id=? OR a.visibility=\'public\'))) ORDER BY ar.rev',[$since,$revision,$userId,$userId]],
+            'albums'=>['SELECT a.*,COALESCE(a.artist_name,ar.name) AS artist_name FROM albums a LEFT JOIN artists ar ON ar.id=a.artist_id WHERE a.rev>? AND a.rev<=? AND (a.owner_id=? OR a.visibility=\'public\' OR EXISTS(SELECT 1 FROM tracks shared WHERE shared.album_id=a.id AND shared.visibility=\'public\' AND shared.deleted=0)) ORDER BY a.rev',[$since,$revision,$userId]],
+            'artists'=>['SELECT ar.* FROM artists ar WHERE ar.rev>? AND ar.rev<=? AND (EXISTS(SELECT 1 FROM tracks t WHERE t.artist_id=ar.id AND (t.owner_id=? OR t.visibility=\'public\')) OR EXISTS(SELECT 1 FROM albums a WHERE a.artist_id=ar.id AND (a.owner_id=? OR a.visibility=\'public\' OR EXISTS(SELECT 1 FROM tracks shared WHERE shared.album_id=a.id AND shared.visibility=\'public\' AND shared.deleted=0)))) ORDER BY ar.rev',[$since,$revision,$userId,$userId]],
             'playlists'=>['SELECT p.* FROM playlists p WHERE p.rev>? AND p.rev<=? AND (p.owner_id=? OR p.visibility=\'public\') ORDER BY p.rev',[$since,$revision,$userId]],
             'playlistItems'=>['SELECT i.* FROM playlist_items i JOIN playlists p ON p.id=i.playlist_id JOIN tracks t ON t.id=i.track_id WHERE i.rev>? AND i.rev<=? AND (p.owner_id=? OR p.visibility=\'public\') AND (t.owner_id=? OR t.visibility=\'public\') ORDER BY i.rev',[$since,$revision,$userId,$userId]],
             'likes'=>['SELECT l.* FROM likes l JOIN tracks t ON t.id=l.track_id WHERE l.rev>? AND l.rev<=? AND l.user_id=? AND (t.owner_id=? OR t.visibility=\'public\') ORDER BY l.rev',[$since,$revision,$userId,$userId]],

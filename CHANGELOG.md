@@ -1,5 +1,18 @@
 # Changelog
 
+## Library fixes (after website integration) · 2026-11-24
+
+- Open the normal player and public library to signed-out guests in PHP, Worker
+  and demo backends. Private music, account data and all mutations stay protected.
+- Choose a new or existing album before upload; revise the whole import in
+  review. Preserve explicit visibility through upload and final organisation.
+- Add visible track/album move and delete actions; skip artwork changes after
+  deletion, with the existing Undo behavior retained.
+- Keep album revision changes in each upload's journal so a multi-song import
+  can be undone without conflicting with its own later uploads.
+- Preserve existing storage identity and data. No setup, credential, key or
+  migration reset is part of this update; paired ZIP gates test overwrite upgrades.
+
 ## Website integration (after v1.1.0)
 
 - Add the paired PHP/PWA website build at `/wavehaus/app/` and reciprocal

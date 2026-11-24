@@ -2,6 +2,11 @@
 
 Base: same origin as the PWA. JSON in/out (`application/json; charset=utf-8`) except media/art/upload parts.
 Auth: session cookie `__Host-wh_session` **or** `Authorization: Bearer wh_live_…` (API tokens, scoped).
+Nested PHP/Worker installs use `__Secure-wh_session` scoped to `APP_BASE` instead.
+Guests may GET the normal library, search, tracks, albums and public playlists,
+and GET/HEAD public media/artwork. Only public rows are returned; account data
+and every mutation require authentication. A public track remains playable
+inside an otherwise private album without exposing that album's private tracks.
 Mutations require header `X-Wavehaus: 1` (cookie auth). Errors: `{ "error": { "code": "rate_limited", "message": "…", "retryAfter": 900 } }` with proper HTTP status.
 Every list endpoint is cursor-paginated: `?cursor=…&limit=…` → `{ items, nextCursor }`.
 Contract tests in `/tests/api` assert every endpoint below against `BASE_URL`.

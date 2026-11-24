@@ -7,6 +7,7 @@ import { APP_BASE,relativePath } from './deployment';
 import { UploadError } from '../../shared/upload-input';
 import { JournalConflict } from '../../shared/journal';
 import { serveMedia } from './media';
+import {guestAuth} from './guest';
 const security={
  'X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','Permissions-Policy':'camera=(self)',
  'Content-Security-Policy':"default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
@@ -23,7 +24,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
    if(!env.APP_SECRET||new TextEncoder().encode(env.APP_SECRET).length<32)fail('configuration','Set APP_SECRET with wrangler secret put APP_SECRET (at least 32 random bytes).',503);
    if(!['GET','HEAD'].includes(request.method)&&request.headers.get('X-Wavehaus')!=='1'&&!(await currentAuth(request,env,false))?.token)fail('csrf','Missing X-Wavehaus header.',403);
    if(path.startsWith('/api/'))response=await apiRoute(request,env,path);
-   else response=await serveMedia(request,env,(await currentAuth(request,env))!,path);
+   else response=await serveMedia(request,env,await currentAuth(request,env,false)||guestAuth(),path);
   }else if(path==='/app'||path==='/app/')response=Response.redirect(new URL(APP_BASE,url),302);
   else if(['GET','HEAD'].includes(request.method)){
    const asset=new URL(request.url);asset.pathname=path;response=await env.ASSETS.fetch(new Request(asset,request));

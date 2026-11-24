@@ -33,6 +33,14 @@ describe('bulk metadata decisions',()=>{
   const preview=await metadataPlan(editInput({...payload,dryRun:true}),f.repo,f.context);expect(preview.published).toBe(3);
   const plan=await metadataPlan(editInput({...payload,publishConfirmed:true}),f.repo,f.context);expect(plan.preview.every(row=>row.after.album_id===target.id&&row.after.visibility==='public')).toBe(true);expect(plan.write.ops.find(op=>op.id===f.album.id)!.after.deleted).toBe(1);expect(plan.write.ops.some(op=>op.table==='albums'&&op.before===null)).toBe(false);
  });
+ it('keeps explicit public uploads public when import organisation creates another album',async()=>{
+  const f=fixture();f.tracks[0].visibility='public';const plan=await metadataPlan(editInput({ids:[f.tracks[0].id],set:{album:'Chosen album'},preserveVisibility:true}),f.repo,f.context);
+  expect(plan.preview[0].after.visibility).toBe('public');expect(plan.write.ops.find(op=>op.table==='albums'&&!op.before)!.after.visibility).toBe('public');expect(plan.madePrivate).toBe(0);
+ });
+ it('does not implicitly publish private tracks while finishing an import into a public album',async()=>{
+  const f=fixture();f.albums.push({...f.album,id:id(8000),title:'Target',identity_key:key('Artist','Target'),visibility:'public'});const plan=await metadataPlan(editInput({ids:[f.tracks[0].id],set:{album:'Target'},preserveVisibility:true}),f.repo,f.context);
+  expect(plan.preview[0].after.visibility).toBe('private');expect(plan.published).toBe(0);
+ });
  it('honours an album with visibility sync disabled',async()=>{
   const f=fixture();f.albums.push({...f.album,id:id(8000),rev:20,title:'Target',identity_key:key('Artist','Target'),visibility:'public',sync_visibility:0});const plan=await metadataPlan(editInput({ids:[f.tracks[0].id],set:{album:'Target'}}),f.repo,f.context);expect(plan.published).toBe(0);expect(plan.preview[0].after.visibility).toBe('private');
  });

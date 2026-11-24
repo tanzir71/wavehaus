@@ -10,7 +10,8 @@ function route_request(PDO $db,string $path,string $method): never {
     if($path==='/api/config'&&$method==='GET'){$cfg=settings($db);reply(['serverName'=>$cfg['server_name'],'registrationMode'=>$cfg['registration_mode'],'maxChunkBytes'=>max_chunk_bytes(),'maxFileBytes'=>$cfg['max_file_bytes'],'powDifficulty'=>$cfg['pow_difficulty'],'features'=>['demo'=>false,'uploads'=>true],'requirements'=>['php'=>PHP_VERSION,'pdoSqlite'=>extension_loaded('pdo_sqlite'),'fileinfo'=>extension_loaded('fileinfo'),'mbstring'=>extension_loaded('mbstring'),'openssl'=>extension_loaded('openssl')]]);}
     if(registration_routes($db,$path,$method))exit;
     if(auth_routes($db,$path,$method))exit;
-    $auth=current_auth($db);
+    $auth=current_auth($db,false);
+    if(!$auth)$auth=$method==='GET'&&public_read_path($path)?guest_auth():current_auth($db);
     if(read_api($db,$auth,$path,$method))exit;
     if(tokens_routes($db,$auth,$path,$method))exit;
     if(access_routes($db,$auth,$path,$method))exit;

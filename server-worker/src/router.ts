@@ -15,6 +15,8 @@ import {readApi} from './read-api';
 import {tokenRoutes} from './tokens';
 import {accessRoutes,registrationRoutes} from './access';
 import {playlistRoutes} from './playlists';
+import {publicReadPath} from '../../shared/public-read';
+import {guestAuth} from './guest';
 export const VERSION='1.0.0',SCHEMA=10;
 export async function apiRoute(request:Request,env:Env,path=new URL(request.url).pathname):Promise<Response>{
  const url=new URL(request.url),method=request.method;
@@ -22,7 +24,7 @@ export async function apiRoute(request:Request,env:Env,path=new URL(request.url)
  if(path==='/api/config'&&method==='GET'){const cfg=await settings(env.DB),hashIterations=iterations(env);return json({serverName:cfg.server_name,registrationMode:cfg.registration_mode,maxChunkBytes:8*1024**2,maxFileBytes:cfg.max_file_bytes,powDifficulty:cfg.pow_difficulty,hashIterations,securityWarning:hashIterations<100000?'Password hashing is below the recommended 100,000 iterations.':null,features:{demo:false,uploads:true}});}
  const registration=await registrationRoutes(request,env,path);if(registration)return registration;
  const result=await authRoutes(request,env,path);if(result)return result;
- const auth=(await currentAuth(request,env))!;
+ const auth=await currentAuth(request,env,false)||(method==='GET'&&publicReadPath(path)?guestAuth():(await currentAuth(request,env))!);
  const read=await readApi(request,env,auth,path);if(read)return read;
  const tokens=await tokenRoutes(request,env,auth,path);if(tokens)return tokens;
  const access=await accessRoutes(request,env,auth,path);if(access)return access;

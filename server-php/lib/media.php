@@ -45,7 +45,7 @@ function serve_media(PDO $db,array $auth,string $path,string $method): never {
     if(!in_array($method,['GET','HEAD'],true))fail('not_found','Not found.',404);
     if(preg_match('~^/media/([0-9A-HJKMNP-TV-Z]{26})$~',$path,$match)){$track=readable_track($db,$auth,$match[1]);stream_media_file(data_dir().'/'.$track['storage_key'],$track['mime'],'"'.$track['sha256'].'"',$method,true);}
     if(preg_match('~^/art/([0-9A-HJKMNP-TV-Z]{26})/(96\.webp|600\.webp|generated-512\.png)$~',$path,$match)){
-        $album=album_row($db,$match[1]);if(!$album||$album['deleted'])fail('not_found','Album not found.',404);if($album['owner_id']!==$auth['user']['id']&&$album['visibility']!=='public')fail('forbidden','This artwork is private.',403);if(!$album['art_key'])fail('not_found','Artwork has not arrived yet.',404);
+        $album=album_row($db,$match[1]);if(!$album||$album['deleted'])fail('not_found','Album not found.',404);if($album['owner_id']!==$auth['user']['id']&&$album['visibility']!=='public'&&!query_one($db,"SELECT id FROM tracks WHERE album_id=? AND visibility='public' AND deleted=0 LIMIT 1",[$album['id']]))fail('forbidden','This artwork is private.',403);if(!$album['art_key'])fail('not_found','Artwork has not arrived yet.',404);
         $base=data_dir().'/'.$album['art_key'];$name=$match[2];if(!is_file($base.'/'.$name)&&$name==='96.webp')$name='600.webp';$metadata=is_file($base.'/mime.json')?json_decode(file_get_contents($base.'/mime.json'),true):[];stream_media_file($base.'/'.$name,$metadata[$name]??'image/png','"'.hash('sha256',$album['art_key'].'/'.$name).'"',$method,false);
     }
     fail('not_found','Not found.',404);

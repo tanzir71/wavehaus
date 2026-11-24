@@ -109,9 +109,9 @@ Full rules, UI and acceptance tests are in **`VISIBILITY.md`**. The enforcement 
 - `GET /api/library` returns rows `WHERE deleted=0 AND (owner_id = :me OR visibility = 'public')`. Playlists follow the same rule.
   - Rows that **became** invisible to the caller since `since` come back as `hidden: [ids]`, so other devices drop them.
 - A public playlist shows only the items the viewer can play. It shows **no count, placeholder or duration** for the ones they can't, so nothing private leaks.
-- `/media/:id` and `/art/:albumId/*`: `403` unless the caller is the owner, or the row is public and the caller is a signed-in member.
+- `/media/:id` and `/art/:albumId/*`: `403` unless the caller is the owner, or the track is public (including signed-out guests). Album artwork is readable when the album or any live track in it is public.
 - Only the uploader changes their own visibility. Admins can force-private (takedown), never publish.
-- **There's no anonymous access** in P0. P2 share links are HMAC-signed, expiring, public-only and read-only.
+- **Public listening works without an account.** Only GET library, search, track/album and public playlist reads plus media/artwork GET/HEAD allow guests. Settings, sessions, history, uploads, editing, deletion and all mutations still require a valid signed-in account. P2 share links remain public-only and read-only.
 - Changing visibility is always logged in `changes`.
 
 ## Redeploys keep data (the Tack pattern)

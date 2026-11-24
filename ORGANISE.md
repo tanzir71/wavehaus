@@ -62,6 +62,23 @@ Confidence per track: **high** when tags are complete, **medium** when filled fr
 
 ## Review import (M9 `21:864`, D3 `26:664`)
 
+Before choosing files, **Album assignment** offers tag/folder suggestions, one
+new album (your title and album artist), or an existing album you own. The same
+control in review can regroup the whole batch while it uploads or afterwards.
+Individual song titles/artists stay intact. Explicit upload visibility wins over
+album suggestions, unless the server locks uploads to Private; finishing import
+organisation preserves each track's current visibility. Auto-organisation never
+silently undoes a publication or publishes a private track.
+
+On an album, use **Move tracks to album** or **Delete album**. A track's options
+also offer **Move to album** and **Delete track**. Moves follow the destination's
+visibility policy and confirm any publication; deletion retains original audio
+for the existing 30-day Undo window.
+
+Local regression checks: `npm test`, `npm run test:php -- --management` and
+`npm run test:worker -- --management`. The management suites use disposable
+stores and phone/desktop browsers; they never read or reset a live installation.
+
 This screen appears after every drop, while the upload continues in the background. It is non-blocking: closing it accepts everything.
 
 - **Summary:** "48 files → 4 albums · 2 need a look". Chips: All / Needs a look / Duplicates / Skipped.

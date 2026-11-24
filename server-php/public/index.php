@@ -37,7 +37,7 @@ try {
         if(!in_array($method,['GET','HEAD'],true)&&($_SERVER['HTTP_X_WAVEHAUS']??'')!=='1'){$csrfAuth=current_auth(database(),false);if(!isset($csrfAuth['token']))fail('csrf','Missing X-Wavehaus header.',403);}
         route_request(database(),$path,$method);
     }
-    if(str_starts_with($path,'/media/')||str_starts_with($path,'/art/')){$db=database();serve_media($db,current_auth($db),$path,$method);}
+    if(str_starts_with($path,'/media/')||str_starts_with($path,'/art/')){$db=database();serve_media($db,current_auth($db,false)??guest_auth(),$path,$method);}
     if($path==='/app'||$path==='/app/'){header('Location: '.app_base(),true,302);exit;}
     if(in_array($method,['GET','HEAD'],true)){
         $app=app_directory();

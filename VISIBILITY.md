@@ -9,15 +9,15 @@ This file is the single source of truth for privacy. `ORGANISE.md`, `AUTH.md`, `
 - **The track is what gets enforced.**
   - `tracks.visibility` is `private` (default) or `public`.
   - `private` means only the uploader (`owner_id`) can see or stream it.
-  - `public` means every signed-in member can see and stream it.
-  - There is no anonymous access. P2 share links only work for public items.
+  - `public` means anyone visiting this server can see and stream it, including signed-out guests.
+  - Guests use the normal app player, public library/search, media and artwork routes. Account data and every mutation still require sign-in. Private tracks never become public just because their album or playlist is visible.
 - **Album:** `albums.visibility` + `albums.sync_visibility` (default on).
   - Albums are **per uploader**. Two members who upload the same record get two album rows, and auto-organise only merges into albums owned by the same uploader (`ORGANISE.md` rule 8).
   - Setting an album's visibility sets **every live track in it** to the same value, in one operation.
   - With `sync_visibility` on, tracks added to or moved into the album later take the album's visibility.
   - If one track is changed on its own afterwards, the album shows as **Mixed**. `albums.visibility` stays as "the default for new tracks".
 - **Playlist:** `playlists.visibility` + `playlists.sync_visibility` (default off).
-  - The playlist's own visibility decides who can see **the playlist**. Private means only the owner. Public means all members, who see **only the items they can play**. Hidden items are not shown or counted for them.
+  - The playlist's own visibility decides who can see **the playlist**. Private means only the owner. Public means everyone, who sees **only the items they can play**. Hidden items are not shown or counted for them.
   - Making a playlist public offers **"Also make my N tracks in it Public"** (checked by default). Only the caller's own tracks change. Other members' tracks keep their own setting: "17 tracks by Mira and Nils keep their own setting".
   - Making a playlist private offers **"Also make my N tracks in it Private"** (unchecked by default). If checked, warn about collateral effects: "3 of them are also in 2 public playlists and 1 public album; they'll disappear there too."
   - `sync_visibility` on a public playlist ("Make tracks I add later Public too") publishes your own tracks as you add them. It's off by default, so adding to a public playlist never publishes silently.

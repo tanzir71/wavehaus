@@ -5,7 +5,7 @@ export type FieldSource = 'tags'|'folder'|'filename'|'inferred'|'default';
 type Field = 'title'|'artist'|'albumArtist'|'album'|'trackNo'|'discNo'|'year'|'genre';
 export interface Organised {
  title:string; artist:string; albumArtist:string; album:string; year?:number; genre:string;
- trackNo?:number; discNo:number; organiseSource:'tags'|'folder'|'filename';
+ trackNo?:number; discNo:number; organiseSource:'tags'|'folder'|'filename'|'manual';
  fieldSources:Partial<Record<Field,FieldSource>>;
  fieldConfidence:Partial<Record<Field,Confidence>>;
  confidence:Confidence; explicitAlbumArtist:boolean; recordedAt?:number;
@@ -16,7 +16,7 @@ export interface ExistingAlbum {id:string;owner_id:string;title:string;artist_na
 export interface OrganisedItem {id:string;filename:string;path:string;metadata:Organised}
 export interface AlbumGroup {
  key:string;title:string;artistName:string;year?:number;items:OrganisedItem[];
- confidence:Confidence;source:'tags'|'folder'|'filename';existingAlbumId?:string;
+ confidence:Confidence;source:'tags'|'folder'|'filename'|'manual';existingAlbumId?:string;
 }
 const extensions=/\.(?:mp3|wav|flac|m4a|alac|ogg|opus|aiff?)(?:\.(?:mp3|wav|flac|m4a|alac|ogg|opus|aiff?))*$/i;
 export const normaliseName=(value:string)=>value.trim().replace(/\s+/g,' ').toLowerCase();

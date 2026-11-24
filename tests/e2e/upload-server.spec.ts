@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { largeFlac } from '../../scripts/large-flac.mjs';
 const base=process.env.AUTH_BASE_URL;
 test.skip(!base,'Runs against the disposable PHP/Worker store.');
-async function signIn(page:import('@playwright/test').Page,label:string){await page.goto(base+'/');await page.getByLabel('Username',{exact:true}).fill('contract_tester');await page.getByLabel('Password',{exact:true}).fill('Final contract passphrase 2026!');await page.getByLabel('Device name',{exact:true}).fill(label);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:/Make room|Good evening/})).toBeVisible();}
+async function signIn(page:import('@playwright/test').Page,label:string){await page.goto(base+'/sign-in');await page.getByLabel('Username',{exact:true}).fill('contract_tester');await page.getByLabel('Password',{exact:true}).fill('Final contract passphrase 2026!');await page.getByLabel('Device name',{exact:true}).fill(label);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:/Make room|Good evening/})).toBeVisible();}
 test('real browser parses tags, folder artwork and lyrics, then another device syncs the private result',async({page,browser},info)=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await signIn(page,'Upload UI '+info.project.name);
  const second=await browser.newContext(),other=await second.newPage();await signIn(other,'Library sync '+info.project.name);const started=Date.now();
@@ -13,8 +13,8 @@ test('real browser parses tags, folder artwork and lyrics, then another device s
  // Each project uses a different fixture so concurrent tests don't skip it.
  const filename=info.project.name==='android'?'01 - Glass Tone.flac':'02 - Glass Tone.wav';
  await input.setInputFiles([resolve(dir+filename),resolve(dir+'cover.png'),...info.project.name==='android'?[resolve(dir+'01 - Glass Tone.lrc')]:[]]);
- const item=page.getByTestId('upload-item').filter({hasText:filename});await expect(item.getByRole('status')).toHaveText(/^Done/,{timeout:120000});
- await page.getByRole('link',{name:`Open album for ${filename}`}).click();await expect(page.getByRole('heading',{name:'Tagged Album'})).toBeVisible();await expect(page.getByText('Private',{exact:true}).first()).toBeVisible();
+ await expect(page.getByText(/Added to your library/).first()).toBeVisible({timeout:120000});
+ if(info.project.name==='android')await page.getByRole('link',{name:'Open album',exact:true}).first().click();else await page.getByRole('link',{name:`Open album for ${filename}`}).click();await expect(page.getByRole('heading',{name:'Tagged Album'})).toBeVisible();await expect(page.getByText('Private',{exact:true}).first()).toBeVisible();
  await other.evaluate(()=>dispatchEvent(new Event('focus')));await expect(other.getByText('Tagged Album',{exact:true}).first()).toBeVisible({timeout:60000});expect(Date.now()-started).toBeLessThan(60000);
  const result=await page.evaluate(async base=>{const data=await (await fetch(base+'/api/library?since=0')).json();return {tracks:data.items.tracks,albums:data.items.albums};},base!);const track=result.tracks.find((t:any)=>t.original_name===filename);expect(track).toMatchObject({title:'Glass Tone',artist_name:'Fixture Artist',visibility:'private'});if(info.project.name==='android')expect(track.lyrics).toContain('[00:01.00]');expect(result.albums.find((a:any)=>a.id===track.album_id).art_source).toBe('folder');
  await page.screenshot({path:info.outputPath('server-upload-album.png'),fullPage:true});expect(errors).toEqual([]);await second.close();

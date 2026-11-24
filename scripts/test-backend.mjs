@@ -36,12 +36,17 @@ try{
  }
  const deadline=Date.now()+45000;let ready=false;while(Date.now()<deadline){if(server.exitCode!==null)throw new Error('Backend stopped before becoming ready.');try{const response=await fetch(base+'/api/health');if(response.ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,200));}if(!ready)throw new Error('Backend did not become ready.');
  console.log(`Testing ${backend} against a disposable local store.`);
+ if(process.argv.includes('--management')){
+  await completed(launch(process.execPath,['node_modules/@playwright/test/cli.js','test','tests/e2e/library-management-server.spec.ts','--output',`test-results/library-${backend}-${Date.now()}`,...process.argv.slice(3).filter(arg=>arg!=='--management')],{stdio:'inherit',env:{...process.env,AUTH_BASE_URL:base}}));
+  console.log(`${backend} library management passed.`);
+ }else{
  await completed(launch(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','vitest.api.config.ts',...process.argv.slice(3)],{stdio:'inherit',env:{...process.env,API_BASE_URL:base,TEST_BACKEND:backend}}));
- await completed(launch(process.execPath,['node_modules/@playwright/test/cli.js','test','tests/e2e/auth-server.spec.ts','tests/e2e/upload-server.spec.ts'],{stdio:'inherit',env:{...process.env,AUTH_BASE_URL:base}}));
+ await completed(launch(process.execPath,['node_modules/@playwright/test/cli.js','test','tests/e2e/auth-server.spec.ts','tests/e2e/upload-server.spec.ts','--output',`test-results/contract-${backend}-${Date.now()}`],{stdio:'inherit',env:{...process.env,AUTH_BASE_URL:base}}));
  if(backend==='php')await appendFile(resolve(temporary,'config.php'),`\ndefine('RESET_OWNER', '${secret}');\n`);
  const reset=()=>fetch(base+'/api/setup/reset',{method:'POST',headers:{'X-Wavehaus':'1','Content-Type':'application/json'},body:JSON.stringify({resetString:secret,newPassword:'Owner reset fixture passphrase!'})});
  const resets=await Promise.all([reset(),reset()]),statuses=resets.map(r=>r.status).sort().join(',');if(statuses!=='200,404')throw new Error('Owner reset must succeed exactly once; received '+statuses);const resetBody=await resets.find(r=>r.status===200).json();if(resetBody.recoveryCodes.length!==10)throw new Error('Owner reset must issue ten new codes.');console.log('One-use owner reset passed, including competing requests.');
  console.log(`${backend} API contract passed.`);
+ }
 }catch(error){if(apache)output+='\n'+await readFile(resolve(temporary,'apache-error.log'),'utf8').catch(()=>'');console.error(output.replaceAll(secret,'[redacted]'));throw error;}
 finally{
  for(const child of children)if(child.exitCode===null)child.kill();

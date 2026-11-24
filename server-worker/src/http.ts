@@ -8,5 +8,8 @@ export async function readLimited(request:Request,max:number){
  const result=new Uint8Array(size);let offset=0;for(const part of parts){result.set(part,offset);offset+=part.byteLength;}return result;
 }
 export const json=(data:unknown,status=200,headers?:HeadersInit)=>{const out=new Headers(headers);out.set('Cache-Control','no-store');return Response.json(data,{status,headers:out});};
-export const cookie=(raw:string,clear=false)=>`__Host-wh_session=${raw}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${clear?0:180*86400}`;
+import {APP_BASE} from './deployment';
+export const sessionCookieName=APP_BASE==='/'?'__Host-wh_session':'__Secure-wh_session';
+export const cookieValue=(request:Request,name:string)=>request.headers.get('Cookie')?.split(';').map(part=>part.trim()).find(part=>part.startsWith(name+'='))?.slice(name.length+1);
+export const cookie=(raw:string,clear=false)=>`${sessionCookieName}=${raw}; Path=${APP_BASE}; HttpOnly; Secure; SameSite=Lax; Max-Age=${clear?0:180*86400}`;
 export const withCookie=(data:unknown,raw:string,status=200)=>json(data,status,{'Set-Cookie':cookie(raw)});

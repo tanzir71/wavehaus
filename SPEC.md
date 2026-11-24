@@ -50,7 +50,7 @@
 ### Access & safety
 - P0 First-run setup: owner account + **recovery codes**. No email, no third-party auth.
 - P0 Sessions per device (revocable), **QR/6-digit pairing**, rate limiting + lockout.
-- P0 **Visibility**: Private (uploader only) / Public (all members) per **track, album, folder or playlist**, plus multi-select from the Library. Default is Private. A whole album or playlist flips in one step, with exact counts shown first and 30-day undo (`VISIBILITY.md`).
+- P0 **Visibility**: Private (uploader only) / Public (anyone visiting the server) per **track, album, folder or playlist**, plus multi-select from the Library. Default is Private. A whole album or playlist flips in one step, with exact counts shown first and 30-day undo (`VISIBILITY.md`).
 - P0 **Settings entry points**: desktop sidebar "Settings"; a gear on the mobile Home and Library headers; the avatar menu (Settings, Devices, Background play, Sign out).
 - P1 Registration modes: Closed / Invite only / Request access / Open; per-member upload permission, quota, invites (referrals); spam hardening (proof-of-work, honeypot, min-fill time, disposable-domain list).
 - P1 Members admin: roles (owner/admin/uploader/listener), storage, invites left, approve/deny requests.
