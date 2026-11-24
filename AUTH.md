@@ -22,7 +22,7 @@ There are no third-party auth providers, email is not required, and nothing is h
 
 ## Sessions
 
-- The token is 32 random bytes (base64url). The cookie is `__Host-wh_session` (HttpOnly, Secure, SameSite=Lax, Path=/, Max-Age 180 days). The DB stores only `sha256(token)`.
+- The token is 32 random bytes (base64url). Root installs use `__Host-wh_session` (HttpOnly, Secure, SameSite=Lax, Path=/, Max-Age 180 days). Nested PHP installs use `__Secure-wh_session` with Path equal to APP_BASE, e.g. `/wavehaus/app/`, to isolate neighboring apps. The DB stores only `sha256(token)`.
 - Expiry slides: `last_seen_at` and `expires_at` update at most once every 10 min per session.
 - `deviceLabel` is required at sign-in. It's pre-filled from the UA ("Pixel 9 · Brave", "Windows · Edge") and can be edited. Assistants' browsers should be named, e.g. "Claude's browser". That label attributes every change in the activity log.
 - Settings → Devices lists sessions (label, last seen, "this device") with **Sign out** for each and **Sign out everywhere else**.

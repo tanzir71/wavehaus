@@ -1,5 +1,20 @@
 # Changelog
 
+## Website integration (after v1.1.0)
+
+- Add the paired PHP/PWA website build at `/wavehaus/app/` and reciprocal
+  `sync:website` command, with clean-source/checksum checks in the website updater.
+- Scope nested PHP session cookies to APP_BASE, preserve root cookie behavior,
+  and retain existing protected fallback storage even when host restrictions lift.
+- Make the Background play installation guide available before sign-in; keep
+  the existing `/join/request` access form and subpath-safe links.
+- Include the full APP_BASE URL in recovery-code downloads, and redirect an
+  existing signed-in owner away from the first-run setup screen.
+- Align shared-hosting upload limits with DEPLOY.md and add no-index headers.
+- Local integration gates cover setup/recovery, two sessions, audio/art uploads,
+  repeated full-site overwrites, migration backups and HTTP Range playback.
+  No deployment or GitHub Actions are run for this integration.
+
 ## v1.1.0 — Desktop density · 2026-11-24
 
 Desktop chrome and lists fit more of your library on screen.

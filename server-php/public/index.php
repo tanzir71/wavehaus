@@ -23,6 +23,7 @@ require_once $lib.'/tokens.php';
 require_once $lib.'/read-api.php';
 require_once $lib.'/router.php';
 header('X-Content-Type-Options: nosniff');
+header('X-Robots-Tag: noindex, nofollow');
 header('Referrer-Policy: same-origin');
 header('Permissions-Policy: camera=(self)');
 header("Content-Security-Policy: default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");

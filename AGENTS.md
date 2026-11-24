@@ -134,3 +134,23 @@ Don't add any of these:
 - stock photos inside the app
 
 Don't commit copyrighted audio: demo and test music is generated.
+
+## Keep Wavehaus synchronized with its source
+
+This repository owns Wavehaus's canonical app and PHP backend. The website
+`tanzir71/tanziro-website` serves its landing at /wavehaus and the paired app
+at /wavehaus/app/. Changes requested from either repository must finish the
+canonical source and the website pair. Never patch generated bundles only.
+Verify and commit canonical changes first, then run `npm run sync:website --
+--website <website-checkout>` (or WAVEHAUS_WEBSITE_DIR). The website equivalent
+is `npm run wavehaus:update -- --source <wavehaus-checkout>` (WAVEHAUS_SOURCE_DIR).
+Use --check to verify the commit pin and archive checksum. The pin must equal
+the source commit actually published. Commit/push only when authorized.
+For this integration, run checks locally; do not enable or invoke GitHub Actions,
+deploy previews, or deploy the website.
+
+Keep ~/wavehaus-data/ and existing protected data-<random>/ fallback storage
+unchanged across overwrite updates, including owner identity, sessions, uploads,
+settings, config/keys and recovery codes. Never re-run setup, reset credentials
+or keys, or package private data. The website's immutable first-install archive
+must remain fixed once published; its mandatory PHP/SQLite gates test upgrades.

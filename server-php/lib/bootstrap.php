@@ -4,7 +4,7 @@ declare(strict_types=1);
 // Private-directory discovery, atomic writes and error copy are adapted from
 // the owner's Tack backend/bootstrap.php. See REFERENCES.md for the port map.
 ini_set('display_errors', '0');
-const WH_VERSION = '1.0.0';
+const WH_VERSION = '1.1.0';
 const WH_SCHEMA = 10;
 
 final class ApiException extends RuntimeException {
@@ -33,6 +33,11 @@ function body(): array {
     if (!is_array($value) || array_is_list($value) && count($value)) fail('invalid_json', 'Use a JSON object.');
     return $value;
 }
+function fallback_data_directories(string $publicRoot, string $documentRoot): array {
+    $candidates=[];
+    foreach(array_unique([$publicRoot,$documentRoot]) as $root)$candidates=array_merge($candidates,glob($root.'/data-*',GLOB_ONLYDIR)?:[]);
+    return array_values(array_filter(array_unique($candidates),fn($path)=>preg_match('/^data-[a-f0-9]{24}$/D',basename($path))&&is_file($path.'/.wavehaus')));
+}
 function data_dir(): string {
     static $directory;
     if ($directory) return $directory;
@@ -46,6 +51,11 @@ function data_dir(): string {
         if (preg_match('~^(.*?)/public_html(?:/|$)~', $normalized, $match)) $home = $match[1];
         $directory = rtrim($home, '/\\') . '/wavehaus-data';
         if (str_starts_with(str_replace('\\', '/', $directory) . '/', rtrim($normalized, '/') . '/')) $directory = dirname($publicRoot) . '/wavehaus-data';
+        // A host may later lift open_basedir restrictions. Keep an established
+        // fallback instead of silently opening a new, empty preferred database.
+        $existing = fallback_data_directories($publicRoot, $documentRoot);
+        if (count($existing) > 1 || count($existing) && (is_file($directory.'/wavehaus.sqlite') || is_file($directory.'/config.php'))) fail('configuration', 'More than one Wavehaus data directory exists. Set WAVEHAUS_DATA_DIR to the directory to use.', 503);
+        if (count($existing)) $directory = $existing[0];
     }
     if (!$custom && (!is_dir($directory) && !@mkdir($directory, 0700, true) || !is_writable($directory))) {
         // Last resort for hosts with open_basedir restrictions. The discovered
@@ -56,8 +66,7 @@ function data_dir(): string {
             // Preserve discovery for an older nested install that put its
             // fallback under DOCUMENT_ROOT. New fallback storage stays beside
             // this app's front controller and its protective rewrite rules.
-            $candidates=[];foreach(array_unique([$publicRoot,$documentRoot]) as $root)$candidates=array_merge($candidates,glob($root.'/data-*',GLOB_ONLYDIR)?:[]);
-            $matches = array_values(array_filter(array_unique($candidates), fn($path) => preg_match('/^data-[a-f0-9]{24}$/D', basename($path)) && is_file($path . '/.wavehaus')));
+            $matches = fallback_data_directories($publicRoot, $documentRoot);
             if (count($matches) > 1) fail('configuration', 'More than one Wavehaus data directory exists. Set WAVEHAUS_DATA_DIR to the directory to use.', 503);
             $directory = count($matches) ? reset($matches) : $publicRoot . '/data-' . bin2hex(random_bytes(12));
             if (!is_dir($directory) && !@mkdir($directory, 0700)) fail('data_not_writable', 'Create the data directory ' . $directory . ' and make it writable by PHP (chmod 755).', 503);

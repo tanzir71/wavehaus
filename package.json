@@ -28,7 +28,9 @@
     "package": "node scripts/package.mjs",
     "preview": "node scripts/serve.mjs",
     "mcp": "node tools/mcp.mjs",
-    "check:density": "node scripts/check-density.mjs"
+    "check:density": "node scripts/check-density.mjs",
+    "build:website": "node scripts/build-website.mjs",
+    "sync:website": "node scripts/sync-website.mjs"
   },
   "dependencies": {
     "@preact/signals": "2.11.4",

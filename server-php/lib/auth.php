@@ -39,14 +39,16 @@ function mint_session(PDO $db, string $userId, string $label): array {
     execute($db, 'INSERT INTO sessions(id,user_id,token_hash,device_label,user_agent,created_at,last_seen_at,expires_at) VALUES(?,?,?,?,?,?,?,?)', [$sid,$userId,hash('sha256',$raw),$label,substr($_SERVER['HTTP_USER_AGENT'] ?? '',0,500),$clock,$clock,$clock+180*86400000]);
     return ['raw'=>$raw,'id'=>$sid,'device_label'=>$label];
 }
+function session_cookie_name(): string { return app_base() === '/' ? '__Host-wh_session' : '__Secure-wh_session'; }
 function session_cookie(string $raw, bool $clear = false): void {
-    setcookie('__Host-wh_session', $raw, ['expires'=>$clear?time()-3600:time()+180*86400,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Lax']);
+    // __Host cookies require Path=/; nested installs use a secure, scoped cookie.
+    setcookie(session_cookie_name(), $raw, ['expires'=>$clear?time()-3600:time()+180*86400,'path'=>app_base(),'secure'=>true,'httponly'=>true,'samesite'=>'Lax']);
 }
 function current_auth(PDO $db, bool $required = true): ?array {
     static $cached = false;
     if ($cached !== false) { if ($required && $cached === null) fail('unauthenticated', 'Sign in to continue.', 401); return $cached; }
     $bearer=bearer_auth($db);if($bearer){$cached=$bearer;return $cached;}
-    $raw = $_COOKIE['__Host-wh_session'] ?? '';
+    $raw = $_COOKIE[session_cookie_name()] ?? '';
     $session = is_string($raw) && strlen($raw) < 256 ? query_one($db, 'SELECT * FROM sessions WHERE token_hash=? AND expires_at>?', [hash('sha256',$raw),now_ms()]) : false;
     $user = $session ? query_one($db, "SELECT * FROM users WHERE id=? AND status='active'", [$session['user_id']]) : false;
     if (!$user) { $cached = null; if ($required) fail('unauthenticated', 'Sign in to continue.', 401); return null; }

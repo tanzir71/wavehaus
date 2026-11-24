@@ -149,3 +149,16 @@ bucket_name = "wavehaus-media"
 - `npm run dev:worker` uses `wrangler dev` with local D1 and R2 instead.
 - `BASE_URL=http://localhost:8080 npm run test:api` runs the same contract suite against either backend.
 - `npm run dev:demo` runs the app with the in-browser demo backend and no server. `npm run build:pages && npx serve site` reproduces the Pages preview locally.
+
+## Portfolio website pair
+
+`npm run build:website -- --out <staging-directory>` builds the PHP/PWA payload
+with APP_BASE=/wavehaus/app/. The website owns /wavehaus and packages this app
+inside its single verified Namecheap ZIP. After authorized source commits run
+`npm run sync:website -- --website <website-checkout>`; use `--check` from either
+checkout to verify the source pin and archive. WAVEHAUS_WEBSITE_DIR supplies the
+destination. Updates overwrite public files in place and retain ~/wavehaus-data
+or an existing deny-all data-<random> directory. Never re-run owner setup.
+Nested PHP installs use __Secure-wh_session with Path matching APP_BASE; root
+installs retain __Host-wh_session. The public /background-play guide works
+before sign-in; /join/request opens the Request access form.

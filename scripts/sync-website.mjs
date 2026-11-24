@@ -1,0 +1,11 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
+const { values } = parseArgs({ options: { website: { type: 'string' }, check: { type: 'boolean' }, 'skip-build': { type: 'boolean' } } });
+const website = values.website || process.env.WAVEHAUS_WEBSITE_DIR;
+if (!website) throw new Error('Pass --website <tanziro-website checkout> or set WAVEHAUS_WEBSITE_DIR.');
+const updater = path.resolve(website, 'scripts/update-wavehaus.mjs');
+if (!existsSync(updater)) throw new Error('The website checkout is missing its Wavehaus updater.');
+execFileSync(process.execPath, [updater, '--source', path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), ...values.check ? ['--check'] : [], ...values['skip-build'] ? ['--skip-build'] : []], { cwd: path.resolve(website), stdio: 'inherit', windowsHide: true });
