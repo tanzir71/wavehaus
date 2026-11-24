@@ -1,1 +1,14 @@
 .assistant-settings{display:flex;flex-direction:column;gap:16px}.assistant-panel{background:var(--wh-surface-1);padding:20px;border-radius:16px;min-width:0}.assistant-panel>h2{font-size:17px;line-height:24px;margin-bottom:8px}.assistant-panel>p{font-size:13px;margin-bottom:16px}.assistant-methods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}.assistant-methods>article{padding:16px;background:var(--wh-surface-2);border-radius:12px;display:flex;flex-direction:column;gap:12px;min-width:0}.assistant-methods>article.browser-method{background:var(--wh-accent-900)}.assistant-methods h3{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;flex-wrap:wrap}.assistant-methods .eyebrow{font-size:10px}.assistant-methods p{font-size:13px}.assistant-methods pre,.assistant-prompt{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--wh-font-mono);font-size:10px;padding:12px;background:var(--wh-bg-base);border-radius:8px;margin:0}.assistant-prompt p{font-size:11px;color:var(--wh-accent-300);margin-top:8px}.assistant-methods .button{margin-top:auto;align-self:flex-start}.token-row{display:flex;align-items:center;gap:16px;padding:16px 0}.token-row>div{flex:1;min-width:0}.token-row code{display:block;font-size:11px;color:var(--wh-text-secondary);margin:4px 0}.token-row small{font-size:11px}.token-scopes{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}.token-scopes label{display:grid;grid-template-columns:20px 1fr;gap:2px 8px}.token-scopes small{grid-column:2}.token-secret{display:flex;flex-direction:column;gap:16px}.token-secret textarea{font-family:var(--wh-font-mono);font-size:11px;padding:12px;resize:vertical}.token-secret>p{font-size:13px}.assistant-panel ol{padding-left:20px;color:var(--wh-text-secondary);font-size:13px}.assistant-panel li{margin-bottom:10px}@media(max-width:1050px){.assistant-methods{grid-template-columns:1fr}}@media(max-width:719px){.assistant-panel{padding:16px}.token-row{gap:10px;flex-wrap:wrap}.token-row .button{margin-left:auto}}
+@media(min-width:1100px){
+  .assistant-settings{gap:12px}
+  .assistant-panel{padding:14px 16px;border-radius:14px}
+  .assistant-panel>h2{font:600 15px/20px var(--wh-font-sans);letter-spacing:-.005em}
+  .assistant-panel>p{line-height:20px;margin-bottom:12px}
+  .assistant-methods{align-items:stretch}
+  .assistant-methods>article{padding:12px;height:100%}
+  .assistant-methods h3{font:500 13px/16px var(--wh-font-sans)}
+  .assistant-methods p{line-height:20px}
+  .assistant-methods pre,.assistant-prompt{height:auto;min-height:0;overflow:visible;flex-shrink:0}
+  .assistant-prompt p{line-height:16px}
+  .token-row{padding:12px 0;gap:12px}
+}

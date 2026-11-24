@@ -66,7 +66,7 @@ The look is premium and quiet, in the spirit of Tidal and SoundCloud Pro: a near
 
 - **Mobile (Android-first), 412×915 dp:** Android status bar 36, content gutter 16, mini player 97 above the nav bar, **bottom nav** with 4 tabs (Home, Search, Library, Upload). The nav uses an M3-style pill indicator (`accent/900` fill with an `accent/500` icon) and leaves room for the gesture handle. Touch targets are at least 48 dp. The iPhone reference frame (390×844) exists only for M8b.
 - **Tablet (720–1099):** a 72 px icon rail replaces the bottom nav. The mini player stays.
-- **Desktop (≥ 1100), 1440×900:** sidebar 264 (`Desktop/Sidebar`) with Home, Search, Your library and **Settings**, then Upload music, playlists and the storage card. The main area scrolls, with a max content width of 1120. **Player bar 88** is fixed at the bottom (`Desktop/PlayerBar`).
+- **Desktop (≥ 1100), 1440×900:** sidebar 264 (`Desktop/Sidebar`) with Home, Search, Your library and **Settings**, then Upload music, playlists and the storage card. The main area scrolls, with a max content width of 1120. **Player bar 88** is fixed at the bottom (`Desktop/PlayerBar`). **Desktop density (v1.1, 24 Nov 2026):** at ≥ 1100 the sizes in this bullet and in the type table are superseded by `DESKTOP_DENSITY.md` (sidebar 232, 32 px controls, `Desktop/*` text styles). Mobile and tablet are unchanged.
 - **Player bar = one centred row** (redesigned: the old two-row stack was cramped). Left to right:
   - Track block (280): cover 56, title and artist, like.
   - Transport: prev, play 36, next. Gap 18.

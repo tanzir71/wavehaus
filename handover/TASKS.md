@@ -192,6 +192,25 @@ The page the owner's own server shows to visitors is **out of Wavehaus scope**. 
 - Docs pages complete.
 - Tag `v1.0.0`.
 
+## M11 — Desktop density (v1.1, D1–D6 updated 24 Nov 2026)
+
+1.0 is built. This is a desktop-only visual pass; the full delta is in `DESKTOP_DENSITY.md`.
+- At ≥ 1100 px only:
+  - sidebar 232;
+  - 32 px nav items, buttons and inputs; 28 px chips;
+  - smaller page and section titles;
+  - 44 px track rows, 48 px quick tiles, 168 px mix cards (6 per row);
+  - tighter panels and spacing.
+- Add the six `Desktop/*` text styles to `tokens.css` and `tokens.json`.
+- **Unchanged:** the player bar, the Home "Jump back in" card, Now Playing, waveform heights, and everything below 1100 px.
+- Replaced renders are in `design/desktop/`. The 1.0 renders are in `design/desktop/v1/`.
+
+**Accept**
+- D1–D6 match the new PNGs at 1440 × 900.
+- Mobile 412 × 915 and tablet screenshots are unchanged from 1.0.
+- E2E is green.
+- Tag `v1.1.0` with a CHANGELOG entry and the usual Pages preview and release.
+
 ## Test fixtures
 
 `tests/fixtures/library/` holds tiny generated audio files: sine tones of 1–3 s in MP3, FLAC, M4A, OGG and WAV. Give them assorted tags, missing tags, junk names, nested folders, a `cover.jpg` and `.lrc` files. Never commit copyrighted audio. The demo seed uses the same generator at longer lengths.

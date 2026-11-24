@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.0 — Desktop density · 2026-11-24
+
+Desktop chrome and lists fit more of your library on screen.
+
+- At 1100 px and above, the sidebar is 232 px, navigation and buttons are 32 px, chips are 28 px and track rows are 44 px with 32 px artwork.
+- Adds six desktop text styles, smaller headings, four-column quick tiles, six-column mix grids, and tighter album, upload, bulk-edit and settings layouts.
+- Keeps mobile and tablet layouts, the 88 px player bar, Jump back in, Now Playing and waveform heights at their 1.0 sizes. Assistant prompts grow with their text and method cards share one height.
+- Adds breakpoint, control-size, overflow and prompt-growth E2E checks, plus a reproducible before/after pixel comparison. No runtime dependency, API, data or playback changes.
+
 ## v1.0.0 — Wavehaus 1.0
 
 - Completes the M0–M10 release: both production adapters, installable browser demo, private music library, playback, organise/bulk tools, access controls, assistants and offline listening.

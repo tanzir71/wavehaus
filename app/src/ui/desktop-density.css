@@ -1,0 +1,99 @@
+/* v1.1: desktop chrome and lists. Listening areas keep their 1.0 sizing. */
+@media (min-width:1100px) {
+  .sidebar{width:var(--wh-sidebar-w);padding:16px 12px;gap:16px}
+  .app-body{margin-left:var(--wh-sidebar-w)}
+  .sidebar .brand{height:24px;margin:0;gap:7.5px;font-size:16.5px;line-height:21px}
+  .sidebar .brand-mark{width:24px;height:24px}
+  .sidebar .brand-mark>svg{transform:scale(.75);transform-origin:top left}
+  .sidebar nav{gap:2px}
+  .sidebar nav a{min-height:32px;padding:8px 10px;gap:10px;border-radius:6px;font:500 13px/16px var(--wh-font-sans)}
+  .sidebar nav a svg,.sidebar .upload-button svg{width:16px;height:16px}
+  .sidebar .upload-button{margin:0;min-height:32px;padding:8px 10px;gap:6px}
+  .sidebar-library{gap:2px}
+  .sidebar-library .section-heading{padding:0;margin:0 0 12px}
+  .sidebar-library .section-heading a{min-width:28px;min-height:28px;display:grid;place-items:center}
+  .sidebar-library>a{height:40px;padding:4px;gap:10px;font:500 13px/16px var(--wh-font-sans)}
+  .sidebar-library>a>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sidebar-library small{margin:0;font:400 12px/16px var(--wh-font-sans)}
+  .sidebar-library .cover,.sidebar-library .liked-tile{width:32px;height:32px;min-width:32px}
+  .sidebar-library .liked-tile svg{width:14px;height:14px}
+  .storage-card{padding:12px;gap:8px;font:400 12px/16px var(--wh-font-sans)}
+  .storage-card strong{font-size:12px}
+
+  .topbar{height:52px;padding:8px 32px;gap:12px}
+  .topbar-history{gap:8px}
+  .topbar-history .icon-button{width:28px;height:28px;padding:6px}
+  .topbar-history svg,.top-search svg{width:16px;height:16px}
+  .top-search{width:320px;height:36px;padding:8px 12px;gap:8px;font:400 13px/20px var(--wh-font-sans)}
+  .top-search>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .top-search kbd{flex-shrink:0}
+  .topbar .avatar{width:28px;height:28px;font-size:12px}
+  .topbar .avatar-menu nav{top:36px}
+  .avatar-menu nav a,.avatar-menu nav>button{min-height:32px;padding:8px 12px;font:500 13px/16px var(--wh-font-sans)}
+
+  main:not(.now-route){padding:16px 32px 40px;gap:24px;font:400 13px/20px var(--wh-font-sans)}
+  .home-heading h1,.page-heading h1,.upload-heading h1,.bulk-heading h1,main>h1{font:600 28px/32px var(--wh-font-sans);letter-spacing:-.015em}
+  .home-heading p,.page-heading p{margin-top:8px}
+  .button:where(:not(.now-playing *):not(.player *):not(.upload-list *)){min-height:32px;padding:6px 14px;gap:6px;font:500 13px/16px var(--wh-font-sans)}
+  :is(.chips button,.chip):not(.resume-card *):not(.now-playing *):not(.host-chip){min-height:28px;padding:4px 10px;font:500 12px/16px var(--wh-font-sans)}
+  /* Explicitly retain inherited 1.0 text metrics in the Home listening card. */
+  .resume-card{font:400 15px/1.47 var(--wh-font-sans)}
+  .quick-tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .quick-tiles>a{min-height:48px;height:48px;gap:12px}
+  .quick-tiles .cover,.quick-tiles .liked-tile{width:48px;height:48px;min-width:48px}
+  .quick-tiles strong{font:500 13px/16px var(--wh-font-sans)}
+  .section-heading{margin-bottom:12px;gap:12px}
+  .section-heading h2{font:600 20px/26px var(--wh-font-sans);letter-spacing:-.01em}
+  .section-heading p{font:400 12px/16px var(--wh-font-sans)}
+  .album-grid:not(.library-grid){grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+  .album-card{gap:0}
+  .album-card>.cover{margin-bottom:8px}
+  .album-card strong{font:500 13px/16px var(--wh-font-sans)}
+  .album-card small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:400 12px/16px var(--wh-font-sans);margin-top:4px}
+  .mix-grid>.album-card:nth-child(n+7){display:none}
+  .mix-grid>.album-card>.cover{max-width:168px}
+  .fresh-grid{gap:16px}
+  .fresh-card{padding:12px}
+  .fresh-card strong{font:600 15px/20px var(--wh-font-sans);letter-spacing:-.005em}
+  .fresh-card small{line-height:16px}
+
+  .collection-heading{gap:24px;padding:8px 0}
+  .collection-heading>.cover{width:220px;height:220px}
+  .collection-heading h1{font:600 40px/44px var(--wh-font-sans);letter-spacing:-.025em;margin:8px 0}
+  .collection-heading p:not(.eyebrow){font:400 12px/16px var(--wh-font-sans)}
+  .collection-heading .actions{gap:16px;margin-top:16px}
+  .collection-heading .play-l{width:48px;height:48px}
+  .collection-heading .play-l svg{width:20px;height:20px}
+  .collection-heading .chip{margin-top:12px}
+  .album-wave{padding:12px;border-radius:14px}
+  .track-row{min-height:44px;height:44px;padding:0 12px;gap:12px}
+  .track-row+.track-row{margin-top:2px}
+  .track-row .track-play{width:28px;height:28px;padding:6px;font:400 12px/16px var(--wh-font-mono)}
+  .track-row .track-art{display:block;width:32px;height:32px;flex-shrink:0}
+  .track-art .cover{width:32px;height:32px}
+  .track-name strong{font:500 13px/16px var(--wh-font-sans)}
+  .track-name small,.track-album{font:400 12px/16px var(--wh-font-sans)}
+  .track-album{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .track-row .icon-button{width:28px;height:28px;padding:6px}
+  .track-row svg:not(.cover){width:16px;height:16px}
+  .track-row .track-select{margin:0}
+
+  .settings-layout{grid-template-columns:210px minmax(0,1fr);gap:16px}
+  .settings-nav{gap:2px}
+  .settings-nav>a{height:34px;min-height:34px;padding:9px 12px;font:500 13px/16px var(--wh-font-sans)}
+  .settings-content,.settings-stack,.security-settings{gap:12px}
+  .settings-content>h2,.security-settings>h2{font:600 20px/26px var(--wh-font-sans);letter-spacing:-.01em}
+  .setting-row,.setting-panel{padding:14px 16px;border-radius:14px;gap:12px}
+  .setting-row strong{font:500 13px/16px var(--wh-font-sans)}
+  .setting-panel h3{font:600 15px/20px var(--wh-font-sans);letter-spacing:-.005em}
+  .setting-row p{font:400 12px/16px var(--wh-font-sans)}
+  .settings-content input[type=number],.settings-content .auth-field input{height:32px;padding:6px 12px;font:400 13px/20px var(--wh-font-sans)}
+  .settings-content input[type=number]{font-family:var(--wh-font-mono);font-size:12px}
+  .search-input{height:32px;padding:6px 12px;gap:8px;font:400 13px/20px var(--wh-font-sans)}
+  .search-input input{height:20px;padding:0;font:inherit}
+  .library-grid{gap:16px}
+  .library-list{gap:8px}
+  .library-list>a{gap:12px;padding:8px 0}
+  .tip{padding:16px;gap:12px}
+  .tip p{font-size:13px}
+}

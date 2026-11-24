@@ -2,3 +2,18 @@
 @media(max-width:1099px){.upload-columns{grid-template-columns:1fr}.upload-review{display:none}}
 @media(max-width:719px){.upload-page{gap:18px}.upload-heading{gap:8px}.upload-heading h1{font-size:28px;width:100%}.upload-heading .host-chip{font-size:10px}.upload-page .drop-zone{padding:24px 20px;min-height:280px;border-radius:16px}.upload-page .drop-zone h2{font-size:18px}.upload-mobile-copy{display:inline}.upload-desktop-copy{display:none}.upload-mark{width:52px;height:52px}.upload-preferences{padding:16px;border-radius:16px}.upload-file-actions .icon-button{width:36px;height:36px}.upload-page .upload-list li{padding:14px 12px}.upload-visibility .chips button{padding:8px 12px}}
 .publish-dialog{border:0;color:var(--wh-text-primary);width:calc(100% - 32px);margin:auto}.publish-dialog:not([open]){display:none}.publish-dialog::backdrop{background:rgba(0,0,0,.7)}
+@media(min-width:1100px){
+  .upload-page{gap:16px}
+  .upload-heading{gap:12px}
+  .upload-columns{gap:16px}
+  .upload-left,.upload-review{gap:12px}
+  .upload-page .drop-zone{padding:24px;gap:16px}
+  .upload-page .drop-zone h2{font:600 15px/20px var(--wh-font-sans);letter-spacing:-.005em}
+  .upload-preferences,.upload-review-card{padding:14px 16px;border-radius:14px}
+  .upload-review-card{gap:12px}
+  .upload-review-card h2{font:600 15px/20px var(--wh-font-sans);letter-spacing:-.005em}
+  .awake-row strong,.upload-album strong{font:500 13px/16px var(--wh-font-sans)}
+  .awake-row p{font:400 12px/16px var(--wh-font-sans)}
+  .upload-visibility{margin-top:12px}
+  .upload-page .upload-list{font:400 15px/1.47 var(--wh-font-sans)}
+}

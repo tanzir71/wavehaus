@@ -2,3 +2,18 @@
 .advanced-fields{color:var(--wh-text-secondary);font-size:12px;text-align:left;margin-top:-10px;padding:4px 0}.rename-fields{display:none}
 @media(max-width:1100px) and (min-width:769px){.bulk-columns{grid-template-columns:1fr}.bulk-panel{max-width:600px;width:100%;margin:auto}.bulk-preview ul{max-height:300px}}
 @media(max-width:768px){.selection-bar{left:16px;right:16px;bottom:162px;max-width:none;transform:none;overflow:auto;gap:4px}.selection-bar .icon-button{width:32px}.selection-bar .button{font-size:12px;padding:8px}.track-select{display:none}.track-row[data-selection-mode=true] .track-select{display:flex}.bulk-page{gap:16px}.bulk-heading h1{font-size:18px}.bulk-heading .icon-button{display:flex;width:28px;height:28px}.bulk-heading>span{font-size:13px}.bulk-toolbar{display:none}.bulk-toolbar strong{display:none}.bulk-columns{display:flex;flex-direction:column-reverse;gap:16px;margin:0 -16px}.bulk-preview{padding:0 16px;width:100%}.bulk-panel{width:100%;border-radius:20px 20px 0 0;padding:10px 16px 24px;background:var(--wh-bg-raised);gap:20px}.sheet-handle{display:block;width:36px;height:4px;background:var(--wh-surface-3);border-radius:4px;margin:0 auto}.bulk-panel-title{margin-top:0}.bulk-panel h2{font-size:22px;line-height:28px}.bulk-panel-title .eyebrow{font-size:10px;padding:2px 6px;background:var(--wh-surface-2);border-radius:3px}.edit-fields input{font-size:15px}.bulk-preview li,.bulk-table-header{grid-template-columns:18px 24px minmax(80px,1.4fr) minmax(60px,1fr) minmax(60px,1fr) 24px;gap:6px;padding-left:0;padding-right:0}.quick-fixes .button{font-size:13px}.bulk-panel>.eyebrow:last-child{display:none}.edit-fields.rename-fields{display:grid}.advanced-fields.rename-fields{display:block}}
+@media(min-width:1100px){
+  .selection-bar{left:calc(50% + var(--wh-sidebar-w)/2);max-width:calc(100% - var(--wh-sidebar-w) - 36px)}
+  .bulk-page{gap:16px}
+  .bulk-toolbar{min-height:32px;padding:8px 12px;gap:16px;line-height:16px}
+  .bulk-toolbar strong{font-size:13px}
+  .bulk-columns{grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+  .bulk-preview li{min-height:42px;height:42px;padding:7px 8px;gap:12px;font:400 12px/16px var(--wh-font-sans)}
+  .bulk-table-header{min-height:30px;height:30px;padding:7px 8px;gap:12px}
+  .bulk-panel{padding:14px;gap:12px;border-radius:14px}
+  .bulk-panel h2{font:600 15px/20px var(--wh-font-sans);letter-spacing:-.005em}
+  .edit-fields{gap:12px 8px}
+  .edit-fields input{height:32px;padding:6px 12px;font:400 13px/20px var(--wh-font-sans)}
+  .rename-controls{gap:8px}
+  .rename-controls input,.rename-controls select{min-height:32px;padding:6px 10px}
+}

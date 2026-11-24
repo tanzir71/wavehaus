@@ -24,6 +24,7 @@ import logo from '../../handover/assets/brand/wavehaus-mark.svg?raw';
 import './ui/tokens.css';
 import './ui/app.css';
 import './ui/playback.css';
+import './ui/desktop-density.css';
 const Storage=lazy(()=>import('./routes/Storage'));
 const Upload=lazy(()=>import('./routes/Upload'));
 const Library=lazy(()=>import('./routes/Library'));
