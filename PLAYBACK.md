@@ -25,12 +25,16 @@ No UI imports. Public API: `load(queue, index)`, `play()`, `pause()`, `seek(ms)`
 - **Audio session (Safari 17+):** `if ('audioSession' in navigator) navigator.audioSession.type = 'playback'` before the first play.
 - **Start from a user gesture.** The first `play()` must come from a tap (autoplay policy). After that, track changes in `ended` are allowed.
 - **Recovery:**
+  - Explicit Play after an interruption reopens the same audio element at its saved position. Retain a pending seek across retries and ignore failures from superseded Play requests.
+  - Watch both pending Play requests and media-time progress, so missing `waiting`/`stalled` events cannot leave the player loading forever.
   - On `error` with `MEDIA_ERR_NETWORK`, or `stalled` longer than 8 s: remember `currentTime`, then reassign the same `src`, seek and play again. Back off at 1, 2, 4, 8 s, then surface a toast.
   - On `online`, retry immediately.
   - On `MEDIA_ERR_SRC_NOT_SUPPORTED`, skip to the next track and mark the track "can't play on this device". Per-device codec probing uses `canPlayType`: ALAC/AIFF often fail outside Apple, and Opus/OGG fails on older iOS.
 - **Interruptions:**
   - When a call or another app pauses us, `pause` fires without our intent. Mark `interrupted = true`. Don't auto-resume, except on Android when `play` comes from the Media Session.
   - Never call `play()` from `visibilitychange`.
+  - Reconcile visibility, page-show and browser-resume events with the actual paused state. Refresh the controls without autoplay; a later user or Media Session Play can reconnect the stream.
+  - Keep Media Session playback state active while a requested stream buffers, including between tracks.
 - **Persist state**: queue, index and position go to IndexedDB every 5 s, and to `PUT /api/player-state` on pause, on track change and on `pagehide` (`sendBeacon`). On boot, restore paused at the saved position ("Jump back in").
 - **Plays**: record when a track ends or changes. A track is `completed` when `ms_played ≥ 0.8 × duration`. It is `skipped` when the user skips before 30 s (or before 50% for tracks shorter than 60 s). Batch to `POST /api/plays`.
 
@@ -38,6 +42,8 @@ No UI imports. Public API: `load(queue, index)`, `play()`, `pause()`, `seek(ms)`
 
 - The queue has three parts: **Now playing**, **Next in queue** (user-added, plays first, drag to reorder) and **Next from: <context>** (album/playlist/search results).
 - When the context runs out and **Autoplay** is on (default), append 10 tracks from `recs.radio(seedTrack)` and show them under "Autoplay". Refill when 3 are left.
+  - Signed-out listeners prepare autoplay from the public catalog without waiting for personal history or a recommendation worker. Signed-in listeners retain their personal recommendation source.
+  - Keep one catalog successor ready when a signed-in queue is empty, so delayed personal history or a suspended recommendation worker cannot interrupt the handoff.
 - Repeat cycles off → all → one. Repeat-one replays the current track on `ended` (`currentTime = 0; play()`).
 - **Shuffle** is "smart shuffle": a deterministic shuffle of the context, weighted to avoid the same artist back to back. Toggling it keeps the current track.
 - **Loop A–B** (P1): set A and B on the waveform. On `timeupdate`, if `t ≥ B` then `seek(A)`. A `requestAnimationFrame` check while visible gives tighter loops.

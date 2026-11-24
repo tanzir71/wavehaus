@@ -17,3 +17,4 @@
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{scroll-behavior:auto!important}}
 
 .public-guide { max-width: 960px; margin: auto; padding: 24px; }
+.home-greeting .button { white-space: nowrap; }

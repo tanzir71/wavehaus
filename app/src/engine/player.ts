@@ -67,6 +67,7 @@ export const setRecommendationSource=(source:(seed:Track,n:number,excluded:strin
 export const recentPlayedIds=()=>engine.recentPlayedIds();
 const removeHandlers=media.handlers({play:resume,pause,stop,previoustrack:prev,nexttrack:()=>next(),seekto:d=>{if(d.seekTime!==undefined)seek(d.seekTime*1000,!!d.fastSeek);},seekbackward:d=>seek(positionMs.peek()-(d.seekOffset||10)*1000),seekforward:d=>seek(positionMs.peek()+(d.seekOffset||10)*1000)});
 const online=()=>engine.online(),pagehide=()=>engine.pagehide();addEventListener('online',online);addEventListener('pagehide',pagehide);
-if(import.meta.hot)import.meta.hot.dispose(()=>{removeHandlers();removeEventListener('online',online);removeEventListener('pagehide',pagehide);engine.dispose();});
+const foreground=()=>{if(!document.hidden)engine.foreground();};document.addEventListener('visibilitychange',foreground);document.addEventListener('resume',foreground);addEventListener('pageshow',foreground);
+if(import.meta.hot)import.meta.hot.dispose(()=>{removeHandlers();removeEventListener('online',online);removeEventListener('pagehide',pagehide);document.removeEventListener('visibilitychange',foreground);document.removeEventListener('resume',foreground);removeEventListener('pageshow',foreground);engine.dispose();});
 
 let loopFrame=0;function visibleLoop(){cancelAnimationFrame(loopFrame);if(document.hidden||!loop.peek()||state.peek()!=='playing')return;const region=loop.peek();if(region&&audio.currentTime*1000>=region.b)seek(region.a);loopFrame=requestAnimationFrame(visibleLoop);}effect(()=>{loop.value;state.value;visibleLoop();});document.addEventListener('visibilitychange',visibleLoop);

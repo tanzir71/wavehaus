@@ -26,3 +26,6 @@ it('publishes real 600/96 WebP artwork as each size becomes available',()=>{
 it('does not restore private lock-screen metadata after a session has cleared',()=>{
  const media=new NativeMediaSession(api,'/music/');media.setAlbums([album]);media.track(track('A'));media.track(null);images[0].onload!();expect(native.metadata).toBeNull();expect(native.playbackState).toBe('none');
 });
+it('keeps an active media session playing while the next stream buffers',()=>{
+ const media=new NativeMediaSession(api,'/music/');media.track(track('A'));media.state('playing');media.state('loading');expect(native.playbackState).toBe('playing');media.state('paused');expect(native.playbackState).toBe('paused');
+});

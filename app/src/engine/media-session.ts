@@ -25,7 +25,7 @@ export class NativeMediaSession implements MediaBridge {
    this.artwork.set(item.src,{ready:false,at:Date.now()});const image=new Image();image.onload=()=>{this.artwork.set(item.src,{ready:true,at:Date.now()});if(this.current)this.track(this.current);};image.onerror=()=>{this.artwork.set(item.src,{ready:false,at:Date.now()});};image.src=item.src;
   }
  }
- state(state:PlaybackState){if('mediaSession'in navigator&&this.current)navigator.mediaSession.playbackState=state==='playing'?'playing':'paused';}
+ state(state:PlaybackState){if('mediaSession'in navigator&&this.current)navigator.mediaSession.playbackState=state==='playing'||state==='loading'?'playing':'paused';}
  position(durationMs:number,positionMs:number,rate:number){
   if(!('mediaSession'in navigator)||!Number.isFinite(durationMs)||durationMs<=0)return;
   try{navigator.mediaSession.setPositionState({duration:durationMs/1000,position:Math.max(0,Math.min(durationMs,positionMs))/1000,playbackRate:Math.max(.01,rate)});}catch{/* Position state is optional on older browsers. */}

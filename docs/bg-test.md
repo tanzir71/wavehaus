@@ -14,3 +14,5 @@ No physical-device run has been observed yet. These are not replaced by Android 
 | iPhone Safari standalone | Unverified, best effort |
 
 Automated M0 evidence: the demo uses one persistent audio element, serves generated originals through the service worker with 206 byte ranges, plays and seeks in Chromium, and reports zero installability errors. The in-app test records wall time, media progress and time spent hidden; it cannot report a pass without a background interval.
+
+24 Nov 2026 recovery regression: PHP browser checks cover guest autoplay into a second public song, resuming an interrupted stream on the same element, single-line mobile Sign in at 360/390/412 px and separation of player action groups. Headless Chromium keeps tabs visible, so the browser test explicitly simulates the hidden/visible lifecycle; this does not verify Android Brave screen-lock behavior. Unit checks cover silent/hung requests, retained retry positions, stale Play failures and Media Session buffering state.

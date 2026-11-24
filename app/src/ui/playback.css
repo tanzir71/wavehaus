@@ -19,7 +19,7 @@
 .now-playing>.waveform{flex:none;margin-bottom:12px}
 .now-playing>.times{margin-bottom:20px}
 .now-bottom .button{background:var(--wh-surface-2);min-height:36px;padding:8px 12px;font-size:12px}
-.now-bottom{gap:8px;align-items:center}
+.now-bottom{gap:12px;align-items:center;margin-bottom:20px}
 .queue-page{max-width:800px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:28px;padding-bottom:80px}
 .queue-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .queue-heading h1{font-size:22px;line-height:28px}

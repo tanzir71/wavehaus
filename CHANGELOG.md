@@ -1,5 +1,17 @@
 # Changelog
 
+## Mobile controls and playback recovery · 2026-11-24
+
+- Keep mobile Sign in on one line and separate the Now Playing action groups.
+- Prepare guest autoplay from the public catalog before the current song ends;
+  signed-out listeners do not need personal history or a recommendation worker.
+- Keep a signed-in library successor ready while personal recommendations load.
+- Keep the media session active while buffering, and reopen interrupted streams
+  at their saved position on Play. Bound hung requests and silent stalls, retain
+  seeks across retries, and ignore outdated playback failures.
+- Reconcile browser resume/visibility events without autoplaying after a pause.
+  Keep the same audio element, queue, accounts and stored music through updates.
+
 ## Library fixes (after website integration) · 2026-11-24
 
 - Open the normal player and public library to signed-out guests in PHP, Worker

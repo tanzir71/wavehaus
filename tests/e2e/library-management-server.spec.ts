@@ -35,6 +35,42 @@ test('guests browse and play public music while private and account data stay pr
  await request(page.request,'/api/visibility',{targets:[{type:'track',id:shared.track.id}],visibility:'private'});await visitor.evaluate(()=>dispatchEvent(new Event('focus')));await expect(visitor.getByTestId('track-row-'+shared.track.id)).toHaveCount(0);expect((await guest.request.get(base+'/media/'+shared.track.id)).status()).toBe(403);
  await guest.close();
 });
+test('guest autoplay advances across a simulated background lifecycle and mobile controls keep their spacing',async({page,browser},info)=>{
+ await login(page);const first=await upload(page.request,'Background first '+info.project.name,'public');await upload(page.request,'Background next '+info.project.name,'public');
+ const guest=await browser.newContext({viewport:{width:390,height:844},isMobile:info.project.name==='android',hasTouch:info.project.name==='android'}),visitor=await guest.newPage();
+ try{
+  await visitor.goto(base+'/');
+  for(const width of [360,390,412]){
+   await visitor.setViewportSize({width,height:844});const signIn=visitor.locator('.home-greeting').getByRole('link',{name:'Sign in',exact:true});await expect(signIn).toBeVisible();
+   expect(await signIn.evaluate(element=>{const range=document.createRange();range.selectNodeContents(element);return range.getClientRects().length;})).toBe(1);
+   expect(await visitor.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  await visitor.setViewportSize({width:390,height:844});await visitor.screenshot({path:info.outputPath('guest-sign-in.png')});
+  await visitor.goto(base+'/album/'+first.album.id);await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>{a.playbackRate=.25;});
+  await visitor.getByRole('button',{name:'Play '+first.track.title,exact:true}).first().click();await expect.poll(()=>visitor.locator('audio').evaluate((a:HTMLAudioElement)=>a.currentTime)).toBeGreaterThan(.1);
+  await visitor.locator('.player-detail').click();await expect(visitor.locator('.now-playing h1')).toHaveText(first.track.title);
+  const bottom=visitor.locator('.now-bottom'),extras=visitor.locator('.listening-extras');await expect(extras).toBeVisible();
+  const bottomBox=await bottom.boundingBox(),extraBox=await extras.boundingBox();expect(extraBox!.y-(bottomBox!.y+bottomBox!.height)).toBeGreaterThanOrEqual(16);
+  await bottom.scrollIntoViewIfNeeded();await visitor.screenshot({path:info.outputPath('now-playing-actions.png')});
+  await visitor.locator('.now-controls').getByRole('button',{name:'Pause playback',exact:true}).click();
+  await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>{a.currentTime=a.duration-.5;a.playbackRate=1;(window as Window&{originalAudio?:HTMLAudioElement}).originalAudio=a;});
+  const original=await visitor.locator('audio').getAttribute('src');await visitor.locator('.now-controls').getByRole('button',{name:'Play music',exact:true}).click();
+  // Headless Chromium keeps every tab visible. Exercise the app's hidden-page
+  // path explicitly; real Android/Brave screen-lock acceptance is separate.
+  await visitor.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
+  await expect.poll(()=>visitor.locator('audio').getAttribute('src'),{timeout:10000}).not.toBe(original);
+  await expect.poll(()=>visitor.locator('audio').evaluate((a:HTMLAudioElement)=>!a.paused&&a.currentTime>.1)).toBe(true);
+  expect(await visitor.evaluate(()=>document.querySelector('audio')===(window as Window&{originalAudio?:HTMLAudioElement}).originalAudio)).toBe(true);
+  await visitor.evaluate(()=>{Reflect.deleteProperty(document,'hidden');Reflect.deleteProperty(document,'visibilityState');document.dispatchEvent(new Event('visibilitychange'));});
+  await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>{a.playbackRate=.25;a.pause();});
+  const at=await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>a.currentTime);await visitor.evaluate(()=>document.dispatchEvent(new Event('resume')));
+  expect(await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>a.paused)).toBe(true);
+  await visitor.locator('.now-controls').getByRole('button',{name:'Play music',exact:true}).click();
+  await expect.poll(()=>visitor.locator('audio').evaluate((a:HTMLAudioElement)=>a.currentTime),{timeout:10000}).toBeGreaterThan(at+.1);
+  expect(await visitor.locator('audio').count()).toBe(1);
+ }finally{await guest.close();}
+});
+
 test('upload album choices override guesses, retain public visibility and can be revised',async({page},info)=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await login(page);await page.goto(base+'/upload');
  await page.getByRole('combobox',{name:'Album assignment',exact:true}).first().selectOption('new');await page.getByRole('textbox',{name:'Custom album title',exact:true}).first().fill('My album '+info.project.name);await page.getByRole('textbox',{name:'Custom album artist',exact:true}).first().fill('Various Artists');
