@@ -58,6 +58,6 @@ addEventListener('wh-unauthenticated',()=>{if(authStatus.value==='signedIn')fini
 if('BroadcastChannel'in window){const channel=new BroadcastChannel('wh-session');channel.onmessage=event=>{if(event.data==='signedOut'&&authStatus.value==='signedIn')finishSignOut(false);};}
 addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes((e.target as Element).tagName)){e.preventDefault();navigate('/search');setTimeout(()=>document.querySelector<HTMLInputElement>('[data-testid=music-search]')?.focus(),0);}});
 
-addEventListener('online',()=>{void loadSession().then(()=>{if(!user.value)clearLibrary();return sync();}).catch(error=>toast(error.message));});
+addEventListener('online',()=>{const wasSignedIn=!!user.peek();void loadSession().then(()=>{if(wasSignedIn&&!user.peek())return finishSignOut();return sync();}).catch(error=>toast(error.message));});
 
 addEventListener('offline',()=>{offlineMode.value=true;});

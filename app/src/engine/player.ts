@@ -9,9 +9,12 @@ import { NativeMediaSession } from './media-session';
 import { platform } from './brave';
 import type { QueueEntry, RepeatMode } from './queue';
 
-// One persistent playback element. Route changes and HMR never replace it.
-export const audio = (document.getElementById('wavehaus-audio') as HTMLAudioElement | null) || document.createElement('audio');
+// Persistent native elements survive routes/HMR. Android can hand off to a
+// buffered next track; iOS and desktop retain their single-element path.
+export let audio = (document.getElementById('wavehaus-audio') as HTMLAudioElement | null) || document.createElement('audio');
 audio.id='wavehaus-audio';audio.hidden=true;audio.preload='none';audio.setAttribute('playsinline','');if(!audio.isConnected)document.body.append(audio);
+const nextAudio=platform()==='android'?(document.getElementById('wavehaus-preload') as HTMLAudioElement|null)||document.createElement('audio'):undefined;
+if(nextAudio){nextAudio.id='wavehaus-preload';nextAudio.hidden=true;nextAudio.preload='none';nextAudio.setAttribute('playsinline','');if(!nextAudio.isConnected)document.body.append(nextAudio);}
 export const state=signal<PlaybackState>('paused'),current=signal<Track|null>(null),positionMs=signal(0),durationMs=signal(0),bufferedMs=signal(0),queue=signal<Track[]>([]),queueIndex=signal(0),repeat=signal<RepeatMode>('off'),shuffle=signal(false),smartShuffle=signal(false),autoplay=signal(true),engineError=signal(''),interrupted=signal(false),volume=signal(1),unsupportedTracks=signal(new Set<string>()),sleepState=signal<{until:number|null;track:string|null}>({until:null,track:null});
 export const loop=signal<{a:number;b:number}|null>(null);
 export const queueSections=signal<{current:QueueEntry|null;manual:QueueEntry[];context:QueueEntry[];automatic:QueueEntry[];label:string;type:string}>({current:null,manual:[],context:[],automatic:[],label:'Your library',type:'library'});
@@ -28,7 +31,7 @@ function warm(url:string|null){
 }
 function resolvedUrl(track:Track){const url=new URL(track.id==='background-test'?`${import.meta.env.BASE_URL}chime-test.wav`:api.mediaUrl(track),location.href);if(url.origin!==location.origin)throw new Error('Playback requires a same-origin media URL.');return url.href;}
 async function unavailable(track:Track){if(!navigator.onLine)return false;try{const response=await fetch(resolvedUrl(track),{method:'HEAD',credentials:'same-origin',cache:'no-store'});if(response.status===401)dispatchEvent(new Event('wh-unauthenticated'));const hidden=response.status===403||response.status===404;if(hidden)dispatchEvent(new CustomEvent('wh-media-forbidden',{detail:{id:track.id,status:response.status}}));return hidden;}catch{return false;}}
-const engine=new AudioEngine({unavailable,audio,media,persistence,listening,url:resolvedUrl,id,warm,ios:platform()==='ios',deviceLabel:platform()==='android'?'Android':platform()==='ios'?'iPhone / iPad':'Desktop',changed:publish});
+const engine=new AudioEngine({unavailable,audio,nextAudio,activeAudio:next=>{audio.id='wavehaus-preload';next.id='wavehaus-audio';audio=next;},media,persistence,listening,url:resolvedUrl,id,warm,ios:platform()==='ios',deviceLabel:platform()==='android'?'Android':platform()==='ios'?'iPhone / iPad':'Desktop',changed:publish});
 function publish(){batch(()=>{
  state.value=engine.state;current.value=engine.current;positionMs.value=engine.positionMs;durationMs.value=engine.durationMs;bufferedMs.value=engine.bufferedMs;engineError.value=engine.error;interrupted.value=engine.interrupted;volume.value=engine.volume;
  const region=loop.peek();if(region?.a!==engine.loop?.a||region?.b!==engine.loop?.b)loop.value=engine.loop?{...engine.loop}:null;

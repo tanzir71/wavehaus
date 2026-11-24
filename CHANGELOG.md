@@ -1,5 +1,20 @@
 # Changelog
 
+## Android buffered track handoff · 2026-11-24
+
+- Preload the next song in a persistent native Android audio element and swap
+  playback roles when ready. The boundary starts buffered media before clearing
+  the previous element, rather than opening a fresh media request after `ended`.
+- Keep inactive preload events out of playback state, refresh it after queue
+  edits and clear its stream on pause, sign-out and disposal. iOS and desktop
+  retain the single-element path; playback recovery still uses the active role.
+- Preserve the guest catalog and queue when connectivity returns. Expired
+  signed-in sessions still clear their playback and private library.
+- Show the loaded build ID in Settings → Updates, so an installed app can be
+  checked after applying a server/app update.
+- Test buffered Android handoff after disconnecting the network, alongside
+  queue changes, unsupported formats and a twenty-song persistent-element run.
+
 ## Mobile controls and playback recovery · 2026-11-24
 
 - Keep mobile Sign in on one line and separate the Now Playing action groups.

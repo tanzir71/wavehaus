@@ -31,13 +31,13 @@ test('guests browse and play public music while private and account data stay pr
  for(const path of ['/api/auth/me','/api/changes','/api/player-state','/api/admin/settings'])expect((await guest.request.get(base+path)).status()).toBe(401);
  expect((await guest.request.patch(base+'/api/tracks',{headers:{'X-Wavehaus':'1'},data:{ids:[shared.track.id],set:{title:'Forbidden'}}})).status()).toBe(401);
  expect((await guest.request.get(base+'/media/'+privateSong.track.id)).status()).toBe(403);expect((await guest.request.get(base+'/media/'+shared.track.id,{headers:{Range:'bytes=0-31'}})).status()).toBe(206);
- await visitor.goto(base+'/album/'+shared.album.id);await visitor.getByRole('button',{name:'Play Public listening fixture',exact:true}).first().click();await expect.poll(()=>visitor.locator('audio').evaluate((audio:HTMLAudioElement)=>audio.currentTime)).toBeGreaterThan(.1);
+ await visitor.goto(base+'/album/'+shared.album.id);await visitor.getByRole('button',{name:'Play Public listening fixture',exact:true}).first().click();await expect.poll(()=>visitor.locator('#wavehaus-audio').evaluate((audio:HTMLAudioElement)=>audio.currentTime)).toBeGreaterThan(.1);
  await request(page.request,'/api/visibility',{targets:[{type:'track',id:shared.track.id}],visibility:'private'});await visitor.evaluate(()=>dispatchEvent(new Event('focus')));await expect(visitor.getByTestId('track-row-'+shared.track.id)).toHaveCount(0);expect((await guest.request.get(base+'/media/'+shared.track.id)).status()).toBe(403);
  await guest.close();
 });
 test('guest autoplay advances across a simulated background lifecycle and mobile controls keep their spacing',async({page,browser},info)=>{
  await login(page);const first=await upload(page.request,'Background first '+info.project.name,'public');await upload(page.request,'Background next '+info.project.name,'public');
- const guest=await browser.newContext({viewport:{width:390,height:844},isMobile:info.project.name==='android',hasTouch:info.project.name==='android'}),visitor=await guest.newPage();
+ const guest=await browser.newContext({viewport:{width:390,height:844},isMobile:info.project.name==='android',hasTouch:info.project.name==='android',userAgent:await page.evaluate(()=>navigator.userAgent)}),visitor=await guest.newPage();
  try{
   await visitor.goto(base+'/');
   for(const width of [360,390,412]){
@@ -46,28 +46,33 @@ test('guest autoplay advances across a simulated background lifecycle and mobile
    expect(await visitor.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   }
   await visitor.setViewportSize({width:390,height:844});await visitor.screenshot({path:info.outputPath('guest-sign-in.png')});
-  await visitor.goto(base+'/album/'+first.album.id);await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>{a.playbackRate=.25;});
-  await visitor.getByRole('button',{name:'Play '+first.track.title,exact:true}).first().click();await expect.poll(()=>visitor.locator('audio').evaluate((a:HTMLAudioElement)=>a.currentTime)).toBeGreaterThan(.1);
+  await visitor.goto(base+'/album/'+first.album.id);await visitor.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>{a.playbackRate=.25;});
+  await visitor.getByRole('button',{name:'Play '+first.track.title,exact:true}).first().click();await expect.poll(()=>visitor.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>a.currentTime)).toBeGreaterThan(.1);
   await visitor.locator('.player-detail').click();await expect(visitor.locator('.now-playing h1')).toHaveText(first.track.title);
   const bottom=visitor.locator('.now-bottom'),extras=visitor.locator('.listening-extras');await expect(extras).toBeVisible();
   const bottomBox=await bottom.boundingBox(),extraBox=await extras.boundingBox();expect(extraBox!.y-(bottomBox!.y+bottomBox!.height)).toBeGreaterThanOrEqual(16);
   await bottom.scrollIntoViewIfNeeded();await visitor.screenshot({path:info.outputPath('now-playing-actions.png')});
-  await visitor.locator('.now-controls').getByRole('button',{name:'Pause playback',exact:true}).click();
-  await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>{a.currentTime=a.duration-.5;a.playbackRate=1;(window as Window&{originalAudio?:HTMLAudioElement}).originalAudio=a;});
-  const original=await visitor.locator('audio').getAttribute('src');await visitor.locator('.now-controls').getByRole('button',{name:'Play music',exact:true}).click();
+  const nativePreload=info.project.name==='android';
+  if(nativePreload)await expect.poll(()=>visitor.locator('#wavehaus-preload').evaluate((a:HTMLAudioElement)=>a.readyState),{timeout:10000}).toBeGreaterThanOrEqual(3);
+  await visitor.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>{(window as Window&{originalAudios?:HTMLAudioElement[]}).originalAudios=Array.from(document.querySelectorAll('audio'));a.currentTime=a.duration-.5;a.playbackRate=1;});
+  const original=await visitor.locator('#wavehaus-audio').getAttribute('src');
+  // A prepared native stream must start even if the server/network disappears
+  // at the boundary. A discarded warm fetch cannot satisfy this check.
+  if(nativePreload)await guest.setOffline(true);
   // Headless Chromium keeps every tab visible. Exercise the app's hidden-page
   // path explicitly; real Android/Brave screen-lock acceptance is separate.
   await visitor.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
-  await expect.poll(()=>visitor.locator('audio').getAttribute('src'),{timeout:10000}).not.toBe(original);
-  await expect.poll(()=>visitor.locator('audio').evaluate((a:HTMLAudioElement)=>!a.paused&&a.currentTime>.1)).toBe(true);
-  expect(await visitor.evaluate(()=>document.querySelector('audio')===(window as Window&{originalAudio?:HTMLAudioElement}).originalAudio)).toBe(true);
+  await expect.poll(()=>visitor.locator('#wavehaus-audio').getAttribute('src'),{timeout:10000}).not.toBe(original);
+  await expect.poll(()=>visitor.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>!a.paused&&a.currentTime>.1)).toBe(true);
+  expect(await visitor.evaluate(()=>{const original=(window as Window&{originalAudios?:HTMLAudioElement[]}).originalAudios!;return original.length===document.querySelectorAll('audio').length&&original.every(a=>a.isConnected);})).toBe(true);
+  if(nativePreload){expect(await visitor.locator('audio').count()).toBe(2);expect(await visitor.locator('#wavehaus-preload').getAttribute('src')).toBeNull();const title=await visitor.locator('.now-playing h1').textContent();const refreshed=visitor.waitForResponse(response=>response.url().includes('/api/library?'));await guest.setOffline(false);await refreshed;await expect(visitor.locator('.now-playing h1')).toHaveText(title!);}
   await visitor.evaluate(()=>{Reflect.deleteProperty(document,'hidden');Reflect.deleteProperty(document,'visibilityState');document.dispatchEvent(new Event('visibilitychange'));});
-  await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>{a.playbackRate=.25;a.pause();});
-  const at=await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>a.currentTime);await visitor.evaluate(()=>document.dispatchEvent(new Event('resume')));
-  expect(await visitor.locator('audio').evaluate((a:HTMLAudioElement)=>a.paused)).toBe(true);
+  await visitor.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>{a.playbackRate=.25;a.pause();});
+  const at=await visitor.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>a.currentTime);await visitor.evaluate(()=>document.dispatchEvent(new Event('resume')));
+  expect(await visitor.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>a.paused)).toBe(true);
   await visitor.locator('.now-controls').getByRole('button',{name:'Play music',exact:true}).click();
-  await expect.poll(()=>visitor.locator('audio').evaluate((a:HTMLAudioElement)=>a.currentTime),{timeout:10000}).toBeGreaterThan(at+.1);
-  expect(await visitor.locator('audio').count()).toBe(1);
+  await expect.poll(()=>visitor.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>a.currentTime),{timeout:10000}).toBeGreaterThan(at+.1);
+  expect(await visitor.locator('#wavehaus-audio').count()).toBe(1);
  }finally{await guest.close();}
 });
 

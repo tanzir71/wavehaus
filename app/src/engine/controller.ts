@@ -13,6 +13,8 @@ export interface MediaBridge {
 }
 export interface EngineOptions {
  audio:HTMLAudioElement;
+ nextAudio?:HTMLAudioElement;
+ activeAudio?:(audio:HTMLAudioElement)=>void;
  media:MediaBridge;
  persistence:PlayerPersistence;
  listening:ListeningHistory;
@@ -69,12 +71,19 @@ export class AudioEngine {
  private refillPending=false;
  private events=new AbortController();
  private temporary=false;
+ private standby:HTMLAudioElement|null=null;
+ private standbyUrl:string|null=null;
  private now:()=>number;
  private clock:()=>number;
  constructor(private options:EngineOptions){
   this.now=options.now||Date.now;this.clock=options.clock||(()=>performance.now());
-  const audio=options.audio;audio.preload='none';
-  const listen=(name:string,handler:()=>void)=>audio.addEventListener(name,handler,{signal:this.events.signal});
+  this.standby=!options.ios&&options.nextAudio&&options.nextAudio!==options.audio?options.nextAudio:null;
+  for(const audio of [options.audio,...(this.standby?[this.standby]:[])])this.bindAudio(audio);
+  this.interval=setInterval(()=>{if(!this.queue.current)return;this.tick();this.publishPosition();this.persist(false);},5000);
+ }
+ private bindAudio(audio:HTMLAudioElement){
+  audio.preload='none';
+  const listen=(name:string,handler:()=>void)=>audio.addEventListener(name,()=>{if(audio===this.options.audio)handler();},{signal:this.events.signal});
   listen('ended',()=>this.ended());
   listen('loadedmetadata',()=>{this.applySeek();this.publishPosition();this.changed();});
   listen('durationchange',()=>{this.applySeek();this.publishPosition();});
@@ -88,8 +97,8 @@ export class AudioEngine {
   listen('pause',()=>{if(!audio.paused||audio.ended)return;this.account();this.interrupted=this.wanted&&(this.state==='playing'||this.state==='loading');this.wanted=false;this.state='paused';this.cancelRecovery();this.persist(true);this.publishPosition();this.changed();});
   listen('waiting',()=>this.watchStall());listen('stalled',()=>this.watchStall());
   listen('error',()=>this.failed());
-  this.interval=setInterval(()=>{if(!this.queue.current)return;this.tick();this.publishPosition();this.persist(false);},5000);
  }
+ get audio(){return this.options.audio;}
  get current(){return this.queue.current?.track||null;}
  get durationMs(){const d=this.options.audio.duration;return Number.isFinite(d)&&d>0?d*1000:this.current?.duration_ms||0;}
  private changed(){this.options.media.state(this.state);this.options.changed();}
@@ -130,7 +139,7 @@ export class AudioEngine {
   if(a.ended)this.seek(0);this.ensureSession();this.state='loading';if(reload)this.restart();else this.attempt();this.prepareNext();this.changed();
  }
  pause(){
-  this.account();this.wanted=false;this.interrupted=false;this.generation++;this.cancelRecovery();this.options.warm?.(null);this.options.audio.pause();this.state='paused';this.persist(true);this.publishPosition();this.changed();
+  this.account();this.wanted=false;this.interrupted=false;this.generation++;this.cancelRecovery();this.clearStandby();this.options.warm?.(null);this.options.audio.pause();this.state='paused';this.persist(true);this.publishPosition();this.changed();
  }
  stop(){this.pause();this.seek(0);this.persist(true);}
  seek(ms:number,fast=false){
@@ -142,7 +151,7 @@ export class AudioEngine {
   const previous=this.queue.current;this.finish(reason);let entry:QueueEntry|null=null;
   const limit=this.queue.canonical.length+this.queue.upcoming.length+1;
   for(let n=0;n<limit;n++){entry=this.queue.advance(reason);if(!entry||!this.unsupported.has(entry.track.id))break;entry=null;}
-  if(!entry){this.wanted=false;this.cancelRecovery();this.options.audio.pause();this.state=reason==='unsupported'?'error':'paused';this.persist(true);this.changed();return;}
+  if(!entry){this.wanted=false;this.cancelRecovery();this.clearStandby();this.options.audio.pause();this.state=reason==='unsupported'?'error':'paused';this.persist(true);this.changed();return;}
   if(reason==='manual'&&this.sleepTrack===previous?.key)this.sleep(null);
   this.select(entry,0,true,entry.key===previous?.key);
  }
@@ -161,13 +170,21 @@ export class AudioEngine {
  private queueChanged(){this.queueRevision++;this.persist(true);this.prepareNext();this.changed();}
  private select(entry:QueueEntry,at:number,play:boolean,reuse=false){
   this.generation++;this.queueRevision++;this.cancelRecovery();this.pendingSeek=Math.max(0,at);this.positionMs=Math.max(0,at);this.bufferedMs=0;this.retries=0;this.retryProgress=0;this.error='';this.interrupted=false;this.loop=null;
-  const a=this.options.audio;this.wanted=play;this.state=play?'loading':'paused';a.preload=play?'auto':'none';
+  const previous=this.options.audio,url=this.urls.get(entry.track.id)!;
+  const prepared=play&&!reuse&&this.standbyUrl===url&&this.standby&&this.standby.readyState>=2&&!this.standby.error?this.standby:null;
+  this.wanted=play;this.state=play?'loading':'paused';
+  if(prepared){this.options.audio=prepared;this.standby=previous;this.standbyUrl=null;this.options.activeAudio?.(prepared);prepared.playbackRate=previous.playbackRate;prepared.volume=previous.volume;}
+  const a=this.options.audio;a.preload=play?'auto':'none';
   if(play)this.options.media.prepare();
   // The URL is already resolved. Do not insert an await, storage request or
   // metadata lookup between assigning this source and calling play().
-  if(!reuse)a.src=this.urls.get(entry.track.id)!;
+  if(prepared)this.applySeek();
+  else if(!reuse)a.src=url;
   else{a.currentTime=0;this.pendingSeek=null;}
   if(play){this.ensureSession();this.attempt();}
+  // Start the already-buffered element before retiring the previous media
+  // session. No fetch, source assignment or storage work gates this handoff.
+  if(prepared)this.clearStandby();
   this.options.media.track(entry.track);this.publishPosition();this.persist(true);this.prepareNext();this.changed();
  }
  private attempt(){
@@ -261,7 +278,8 @@ export class AudioEngine {
     if(this.ownerId&&this.recommendationSource){this.recommendationsPending=true;void this.recommendationSource(seed,wanted,[...excluded],this.queue.history.slice(-2).map(entry=>entry.track.artist_name)).then(apply).catch(()=>{}).finally(()=>{if(epoch===this.epoch)this.recommendationsPending=false;});}
     else apply(shuffleTracks([...this.catalog.values()].filter(track=>!excluded.has(track.id)),this.now()>>>0,seed.artist_name));
    }
-   if(this.options.warm){
+   if(this.standby){const next=this.queue.upcoming[0]?.track;this.prepareStandby(this.wanted&&next?this.urls.get(next.id)||null:null);}
+   else if(this.options.warm){
     const next=this.queue.upcoming[0]?.track;
     // Probe this device once per format before spending bandwidth on a warm
     // request. A negative hint never blocks an explicit playback attempt.
@@ -270,6 +288,13 @@ export class AudioEngine {
     this.options.warm(this.wanted&&next&&(!mime||this.codecSupport.get(mime))?this.urls.get(next.id)||null:null);
    }
   });
+ }
+ private clearStandby(){
+  this.standbyUrl=null;const a=this.standby;if(!a)return;a.pause();a.removeAttribute('src');a.load();a.preload='none';
+ }
+ private prepareStandby(url:string|null){
+  const a=this.standby;if(!a)return;if(!url){if(this.standbyUrl)this.clearStandby();return;}
+  if(this.standbyUrl===url)return;this.clearStandby();this.standbyUrl=url;a.preload='auto';a.src=url;a.load();
  }
  snapshot():PlayerSnapshot{const timeline=this.queue.timeline;return {queue:timeline.map(e=>e.track.id),index:Math.max(0,timeline.findIndex(e=>e.key===this.queue.current?.key)),positionMs:Math.max(0,Math.round(this.positionMs)),shuffle:this.queue.shuffle,repeat:this.queue.repeat,autoplay:this.queue.autoplay,updatedAt:this.now(),sections:this.queue.save()};}
  private persist(remote:boolean,pagehide=false){if(!this.temporary&&this.current)this.options.persistence.write(this.snapshot(),remote,pagehide);}
@@ -285,8 +310,8 @@ export class AudioEngine {
  private scheduleSleep(){if(this.sleepUntil===null)return;const left=this.sleepUntil-this.now();if(left<=0){this.expireSleep();return;}this.fade();this.sleeper=setTimeout(()=>this.scheduleSleep(),left>10000?left-10000:Math.min(250,left));}
  private expireSleep(){this.pause();this.sleep(null);}
  clear(){
-  this.persist(true);this.finish('signout',false);this.wanted=false;this.generation++;this.cancelRecovery();this.sleep(null);this.options.warm?.(null);
+  this.persist(true);this.finish('signout',false);this.wanted=false;this.generation++;this.cancelRecovery();this.clearStandby();this.sleep(null);this.options.warm?.(null);
   const a=this.options.audio;a.pause();a.removeAttribute('src');a.load();a.preload='none';this.queue.current=null;this.queue.history=[];this.queue.manual=[];this.queue.remaining=[];this.queue.automatic=[];this.queue.canonical=[];this.queue.smartShuffle=false;this.queueRevision++;this.positionMs=0;this.bufferedMs=0;this.pendingSeek=null;this.state='paused';this.error='';this.interrupted=false;this.temporary=false;this.loop=null;this.options.media.track(null);this.changed();
  }
- dispose(){this.events.abort();clearInterval(this.interval);this.cancelRecovery();clearTimeout(this.sleeper);this.options.warm?.(null);this.options.persistence.dispose();this.options.listening.dispose();}
+ dispose(){this.events.abort();clearInterval(this.interval);this.cancelRecovery();this.clearStandby();clearTimeout(this.sleeper);this.options.warm?.(null);this.options.persistence.dispose();this.options.listening.dispose();}
 }

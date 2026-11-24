@@ -17,17 +17,40 @@ class FakeAudio extends EventTarget {
  fail(code:number){this.error={code};this.dispatchEvent(new Event('error'));}
 }
 const track=(n:number)=>({id:`01J000000000000000000000${String(n).padStart(2,'0')}`,title:'Track '+n,artist_name:'Artist '+n,album_title:'Album',album_id:'album',duration_ms:10000,deleted:0} as Track);
-function fixture(){
+function fixture(nativePreload=false,ios=false){
  vi.useFakeTimers();vi.setSystemTime(1700000000000);const audio=new FakeAudio(),plays:ListeningEvent[]=[],saved:PlayerSnapshot[]=[],order:string[]=[];
+ const standby=new FakeAudio();
  let read=async():Promise<PlayerSnapshot|null>=>null;
- const engine=new AudioEngine({audio:audio as unknown as HTMLAudioElement,url:t=>'/media/'+t.id,id:()=>track(9).id,now:Date.now,clock:Date.now,changed:()=>{},
+ const engine=new AudioEngine({audio:audio as unknown as HTMLAudioElement,nextAudio:nativePreload?standby as unknown as HTMLAudioElement:undefined,ios,url:t=>'/media/'+t.id,id:()=>track(9).id,now:Date.now,clock:Date.now,changed:()=>{},
  media:{prepare:()=>{},track:()=>order.push('metadata'),state:()=>{},position:()=>{}},
  persistence:{configure:()=>{},read:()=>read(),write:s=>{saved.push(s);order.push('persist');},flush:()=>{},dispose:()=>{}},
  listening:{configure:()=>{},record:p=>{plays.push(p);order.push('record');},recent:async()=>[],flush:()=>{},dispose:()=>{}}});
- engine.setAutoplay(false);return{engine,audio,plays,saved,order,setRead:(r:typeof read)=>{read=r;}};
+ engine.setAutoplay(false);return{engine,audio,standby,plays,saved,order,setRead:(r:typeof read)=>{read=r;}};
 }
 const engines:AudioEngine[]=[];afterEach(()=>{for(const e of engines.splice(0))e.dispose();vi.useRealTimers();});
-function setup(){const f=fixture();engines.push(f.engine);return f;}
+function setup(nativePreload=false,ios=false){const f=fixture(nativePreload,ios);engines.push(f.engine);return f;}
+
+describe('native next-track preloading',()=>{
+ it('starts the buffered successor without a source assignment or network load at ended',async()=>{
+  const{engine,audio,standby}=setup(true);engine.start([track(1),track(2)]);audio.metadata();audio.playbackRate=1.25;engine.setVolume(.7);await Promise.resolve();
+  expect(standby.src).toBe('/media/'+track(2).id);expect(standby.preload).toBe('auto');standby.metadata();standby.readyState=3;standby.calls=[];audio.end();
+  expect(engine.audio).toBe(standby);expect(standby.calls).toEqual(['play']);expect(standby.currentTime).toBe(0);expect(standby.playbackRate).toBe(1.25);expect(standby.volume).toBe(.7);expect(engine.state).toBe('playing');expect(audio.src).toBe('');
+ });
+ it('ignores load, pause and error events from the inactive preloader',async()=>{
+  const{engine,audio,standby}=setup(true);engine.start([track(1),track(2)]);audio.metadata();audio.progress(3);await Promise.resolve();standby.metadata(30);standby.fail(4);standby.dispatchEvent(new Event('pause'));
+  expect(engine.current?.id).toBe(track(1).id);expect(engine.durationMs).toBe(10000);expect(engine.positionMs).toBe(3000);expect(engine.state).toBe('playing');expect(engine.unsupported.size).toBe(0);
+ });
+ it('falls back to the current element if the successor is not buffered',async()=>{
+  const{engine,audio,standby}=setup(true);engine.start([track(1),track(2)]);audio.metadata();await Promise.resolve();expect(standby.readyState).toBe(0);audio.end();expect(engine.audio).toBe(audio);expect(audio.src).toBe('/media/'+track(2).id);expect(engine.state).toBe('playing');
+ });
+ it('replaces a removed queue candidate and clears native preload on pause and sign-out',async()=>{
+  const{engine,audio,standby}=setup(true);engine.start([track(1),track(2),track(3)]);await Promise.resolve();engine.remove(engine.queue.upcoming[0].key);await Promise.resolve();expect(standby.src).toBe('/media/'+track(3).id);
+  engine.pause();expect(standby.src).toBe('');engine.resume();await Promise.resolve();expect(standby.src).toBe('/media/'+track(3).id);engine.configure(null);expect(audio.src).toBe('');expect(standby.src).toBe('');expect(standby.paused).toBe(true);
+ });
+ it('keeps the single-element path on iOS',async()=>{
+  const{engine,audio,standby}=setup(true,true);engine.start([track(1),track(2)]);await Promise.resolve();expect(standby.src).toBe('');audio.metadata();audio.end();expect(engine.audio).toBe(audio);expect(audio.src).toBe('/media/'+track(2).id);
+ });
+});
 
 describe('the permanent audio engine',()=>{
  it.each([false,true])('prepares guest autoplay before the first song ends (after sign-out: %s)',async signedOut=>{

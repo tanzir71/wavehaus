@@ -11,8 +11,9 @@ No UI imports. Public API: `load(queue, index)`, `play()`, `pause()`, `seek(ms)`
 
 ### Rules
 
-- **One persistent `<audio>` element** created once at boot, appended to `document.body`, never re-created, never removed on route changes. On iOS, use exactly one element for everything (iOS allows one active media session per page).
-  - Non-iOS only: a second hidden `<audio preload="auto">` preloads the next track. On `ended`, swap roles.
+- **Persistent native audio elements**, created at boot and never re-created or removed on route changes. iOS and desktop use one element. Android uses two native elements: one active and one paused preloader.
+  - Android's hidden `<audio preload="auto">` loads the next queued stream. When playable, promote it on `ended`, call `play()` before clearing the previous element, and swap roles. No new source/network load gates that buffered handoff. If preload is unavailable, retain the synchronous single-element fallback.
+  - Only the active role drives state, errors and listening history. Cancel stale preloads on queue changes and clear them on pause or sign-out. `#wavehaus-audio` identifies the active role; UI code reads the live exported element.
 - **Never route the playback element through Web Audio on iOS.** `createMediaElementSource` makes iOS suspend audio in the background. Waveforms come from stored peaks, not an `AnalyserNode`. Crossfade and ReplayGain (P2) use `element.volume` on desktop/Android only. iOS volume is read-only, so skip both there.
 - **Advance synchronously in `ended`.** Inside the `ended` handler, in the same task: set `audio.src = nextUrl`, then `audio.play()`. Don't `await` anything before setting `src`, and don't fetch metadata first. A gap in the background can lose the media session on iOS and some Android OEM skins. Resolve the next track's URL ahead of time (`/media/:id`, same-origin, cookie auth).
 - **Same-origin media URLs only.** No signed query tokens (they expire mid-session) and no redirects to other hosts.
