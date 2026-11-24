@@ -1,5 +1,15 @@
 # Changelog
 
+## Touch scrolling without accidental playback · 2026-11-24
+
+- Wait for a completed touch tap or deliberate horizontal waveform scrub before
+  seeking or starting an album. Vertical and ambiguous diagonal pans cancel
+  playback interaction and remain native page scrolls.
+- Ignore compatibility clicks following touch drags across app controls,
+  preserving intentional taps, mouse presses, keyboard activation and focus.
+- Retain long-press moments and verify real touch scrolling in both directions,
+  row swipes, tap release, horizontal seeking, keyboard seeking and mouse input.
+
 ## Android buffered track handoff · 2026-11-24
 
 - Preload the next song in a persistent native Android audio element and swap

@@ -48,6 +48,7 @@ No UI imports. Public API: `load(queue, index)`, `play()`, `pause()`, `seek(ms)`
 - Repeat cycles off → all → one. Repeat-one replays the current track on `ended` (`currentTime = 0; play()`).
 - **Shuffle** is "smart shuffle": a deterministic shuffle of the context, weighted to avoid the same artist back to back. Toggling it keeps the current track.
 - **Loop A–B** (P1): set A and B on the waveform. On `timeupdate`, if `t ≥ B` then `seek(A)`. A `requestAnimationFrame` check while visible gives tighter loops.
+- **Touch intent:** waveform touch-down only previews a position. A completed tap or a clearly horizontal drag commits the seek; vertical/ambiguous pans and cancelled pointers do not start music or seek. Keep native vertical scrolling, mouse press/drag, keyboard seeking and stationary long-press moments. Ignore a compatibility click after a touch drag across other controls too.
 - **Sleep timer**: 5/15/30/45/60 min or end of track.
   - Desktop/Android: fade the volume over the last 10 s, then pause.
   - iOS: pause at the time, with no fade.

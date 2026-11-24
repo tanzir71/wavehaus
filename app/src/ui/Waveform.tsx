@@ -1,6 +1,7 @@
 import { useEffect,useRef,useState } from 'preact/hooks';
 import { time } from '../library/ids';
 import { layoutSegments,segmentAtX,timeAtX,xAtTime,type WaveSegment } from '../engine/wave-layout';
+import {touchMotion,type TouchMotion} from './touch-intent';
 export type WaveVariant='Hero'|'Now'|'Scrubber'|'Wide'|'Mini'|'Row'|'Strip';
 interface Props {onMoment?:(ms:number)=>void;loop?:{a:number;b:number}|null;onLoopChange?:(a:number,b:number)=>void;peaks?:string|null;position?:number;duration?:number;onSeek?:(ms:number)=>void;variant?:WaveVariant;label?:string;playing?:boolean;livePosition?:()=>number;segments?:WaveSegment[];moments?:{id:string;at_ms:number;label:string}[]}
 const peakCache=new Map<string,Uint8Array>();
@@ -8,7 +9,7 @@ function decode(value?:string|null){if(!value)return null;const cached=peakCache
 export function Waveform({peaks,position=0,duration=0,onSeek,variant='Scrubber',label='Playback position',playing=false,livePosition,segments,moments=[],onMoment,loop,onLoopChange}:Props){
  const canvas=useRef<HTMLCanvasElement>(null),container=useRef<HTMLDivElement>(null),drag=useRef(false),lastSeek=useRef(0),drawRef=useRef<()=>void>(()=>{}),hoverX=useRef<number|null>(null),latest=useRef({position,duration,onSeek,playing,livePosition,segments});
  latest.current={position,duration,onSeek,playing,livePosition,segments};
- const hold=useRef<{timer?:ReturnType<typeof setTimeout>;x:number;y:number;long:boolean}>({x:0,y:0,long:false});useEffect(()=>()=>clearTimeout(hold.current.timer),[]);
+ const hold=useRef<{timer?:ReturnType<typeof setTimeout>;clientX:number;clientY:number;long:boolean;id:number|null;touch:boolean;intent:TouchMotion}>({clientX:0,clientY:0,long:false,id:null,touch:false,intent:'tap'});useEffect(()=>()=>clearTimeout(hold.current.timer),[]);
  const [bubble,setBubble]=useState<{fraction:number;at:number;title?:string}|null>(null);
  useEffect(()=>{
   const el=canvas.current!,wrap=container.current!,ctx=el.getContext('2d');if(!ctx)return;
@@ -47,10 +48,10 @@ export function Waveform({peaks,position=0,duration=0,onSeek,variant='Scrubber',
  return <div ref={container} class={`waveform wave-${variant.toLowerCase()}`}>
   {loop&&<span class="wave-loop-region" style={{left:(loop.a/(duration||1)*100)+'%',width:((loop.b-loop.a)/(duration||1)*100)+'%'}}/>}
   <div class="wave-hit" role={interactive?duration>0?'slider':'button':'img'} aria-label={label} aria-orientation={interactive&&duration>0?'horizontal':undefined} aria-valuemin={interactive&&duration>0?0:undefined} aria-valuemax={interactive&&duration>0?Math.round(duration/1000):undefined} aria-valuenow={interactive&&duration>0?Math.round(Math.max(0,Math.min(duration,position))/1000):undefined} aria-valuetext={interactive&&duration>0?`${time(position)} of ${time(duration)}`:undefined} tabIndex={interactive?0:undefined}
-   onPointerDown={e=>{if(!onSeek)return;drag.current=true;e.currentTarget.setPointerCapture(e.pointerId);lastSeek.current=performance.now();const at=pointer(e.clientX,!onMoment);hold.current={x:e.clientX,y:e.clientY,long:false,timer:onMoment?setTimeout(()=>{hold.current.long=true;navigator.vibrate?.(8);onMoment(at);},500):undefined};}}
-   onPointerMove={e=>{if(Math.hypot(e.clientX-hold.current.x,e.clientY-hold.current.y)>8)clearTimeout(hold.current.timer);if(drag.current){const commit=performance.now()-lastSeek.current>=50;if(commit)lastSeek.current=performance.now();pointer(e.clientX,commit);}else if(e.pointerType==='mouse')pointer(e.clientX,false);}}
-   onPointerUp={e=>{clearTimeout(hold.current.timer);if(drag.current&&!hold.current.long)pointer(e.clientX,true);drag.current=false;hoverX.current=null;setBubble(null);drawRef.current();}}
-   onPointerCancel={()=>{clearTimeout(hold.current.timer);drag.current=false;hoverX.current=null;setBubble(null);drawRef.current();}}
+   onPointerDown={e=>{if(!onSeek||e.button!==0||!e.isPrimary)return;clearTimeout(hold.current.timer);const touch=e.pointerType!=='mouse';drag.current=true;if(!touch)e.currentTarget.setPointerCapture(e.pointerId);lastSeek.current=performance.now();const at=pointer(e.clientX,!touch&&!onMoment);hold.current={clientX:e.clientX,clientY:e.clientY,long:false,id:e.pointerId,touch,intent:touch?'tap':'scrub',timer:onMoment?setTimeout(()=>{hold.current.long=true;navigator.vibrate?.(8);onMoment(at);},500):undefined};}}
+   onPointerMove={e=>{const active=hold.current;if(drag.current&&active.id===e.pointerId){const motion=touchMotion(active,e);if(motion!=='tap')clearTimeout(active.timer);if(active.touch&&active.intent==='tap'&&motion!=='tap'){active.intent=motion;if(motion==='scrub')e.currentTarget.setPointerCapture(e.pointerId);}if(active.intent==='scroll'){drag.current=false;hoverX.current=null;setBubble(null);drawRef.current();return;}if(active.long)return;const commit=(!active.touch||active.intent==='scrub')&&performance.now()-lastSeek.current>=50;if(commit)lastSeek.current=performance.now();pointer(e.clientX,commit);}else if(e.pointerType==='mouse')pointer(e.clientX,false);}}
+   onPointerUp={e=>{const active=hold.current;if(active.id!==e.pointerId)return;clearTimeout(active.timer);if(drag.current&&!active.long&&active.intent!=='scroll'&&(!active.touch||active.intent==='scrub'||touchMotion(active,e)!=='scroll'))pointer(e.clientX,true);active.id=null;drag.current=false;hoverX.current=null;setBubble(null);drawRef.current();}}
+   onPointerCancel={()=>{clearTimeout(hold.current.timer);hold.current.id=null;drag.current=false;hoverX.current=null;setBubble(null);drawRef.current();}}
    onPointerLeave={()=>{if(!drag.current){hoverX.current=null;setBubble(null);drawRef.current();}}}
    onKeyDown={e=>{if(!onSeek)return;if(!duration&&['Enter',' '].includes(e.key)){e.preventDefault();onSeek(0);return;}const delta=e.shiftKey?30000:5000;if(['ArrowRight','ArrowLeft','Home','End'].includes(e.key)){e.preventDefault();onSeek(Math.max(0,Math.min(duration,e.key==='Home'?0:e.key==='End'?duration:position+(e.key==='ArrowRight'?delta:-delta))));}}}><canvas ref={canvas} aria-hidden="true"/></div>
   {bubble&&<span class="wave-tooltip" aria-hidden="true" style={{left:`${Math.max(.08,Math.min(.92,bubble.fraction))*100}%`}}>{bubble.title&&<strong>{bubble.title} · </strong>}{time(bubble.at)}</span>}
