@@ -87,3 +87,70 @@
 .play-button svg{color:var(--wh-text-primary)}
 .now-playing .format-tags{justify-content:flex-start;gap:6px}
 .now-playing .format-tags>span{border-radius:4px;padding:4px 8px;background:var(--wh-surface-2);line-height:14px}
+
+/* M5b: reserve the dock, then give the artwork the remaining viewport. */
+.now-stage,.now-dock{display:contents}
+.now-stage>header{display:flex;justify-content:space-between;align-items:center;text-align:center;margin-bottom:24px}
+.now-stage>header strong{font-size:14px;font-weight:500}
+.now-stage>.brave-banner{margin-bottom:20px}
+.now-art{display:flex;justify-content:center;margin-bottom:24px}
+.now-art>.cover{width:300px}
+.now-track>div{min-width:0;flex:1}
+.now-track h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.now-meta{display:flex;align-items:center;gap:8px;min-width:0}
+.now-meta>p{margin:4px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.now-playing .now-meta .format-tags{margin:0;align-items:center;flex-shrink:0}
+.now-progress{margin-bottom:20px;padding-top:30px}
+.now-progress>.waveform{flex:none;margin-bottom:6px}
+.now-progress>.times{align-items:center;min-height:20px;line-height:14px}
+.now-loop-status{padding:3px 8px;border-radius:999px;background:var(--wh-accent-900);color:var(--wh-accent-300);white-space:nowrap;font-size:10px;text-transform:uppercase}
+
+@media(max-width:719px){
+ body:has(.now-route .now-playing) .app-body{height:100dvh;min-height:0;display:flex;flex-direction:column;padding-bottom:0;background:var(--wh-now-bg)}
+ body:has(.now-route .now-playing) :is(.demo-banner,.offline-banner){flex:none}
+ main.now-route:has(.now-playing){flex:1;min-height:0;padding:0 24px;gap:0;width:100%;background:var(--wh-now-bg)}
+ .now-route>.now-playing{height:100%;padding:0;flex:none}
+ .now-stage{display:flex;flex:none;flex-direction:column;height:100%;min-height:450px;padding:12px 0 max(16px,env(safe-area-inset-bottom));container:now-player / size}
+ .now-stage>header{flex:none;gap:8px;margin:0}
+ .now-stage>header>div{min-width:0}
+ .now-stage>header strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:18px}
+ .now-stage>header .eyebrow{font-size:10px}
+ .now-stage>header>.icon-button{width:44px;height:44px;padding:8px}
+ .now-stage>header>.icon-button:first-child{margin-left:-8px}
+ .now-stage>header>.icon-button:last-child{margin-right:-8px}
+ .now-stage>.brave-banner{flex:none;margin:8px 0 0;font-size:12px}
+ .now-art{flex:1;min-height:0;margin:0;padding:12px 0;align-items:center;container-type:size}
+ .now-art>.cover{width:min(100cqw,100cqh);height:min(100cqw,100cqh);max-width:100%;border-radius:12px;object-fit:cover}
+ .now-dock{display:flex;flex:none;flex-direction:column;gap:16px}
+ .now-playing .now-track{gap:8px;margin:0}
+ .now-track h1{font-size:28px;line-height:32px;letter-spacing:-.015em}
+ .now-meta>p{font-size:15px;line-height:22px;min-width:24px;margin:4px 0 0}
+ .now-playing .now-meta .format-tags{gap:5px;margin-top:4px;font-size:10px;line-height:14px;color:var(--wh-text-tertiary)}
+ .now-playing .now-meta .format-tags>span{padding:0;background:none;gap:4px}
+ .now-meta .format-tags>span+span:before{content:'·'}
+ .now-meta .format-tags .chip{padding:0;min-height:22px;background:none;font:inherit;gap:3px;color:inherit}
+ .now-meta .format-tags .chip svg{width:11px;height:11px}
+ .now-progress{display:flex;flex-direction:column;gap:6px;padding-top:12px;margin:0}
+ .now-playing .now-progress>.waveform{height:61px;margin:0;--wh-wave-bar-width:2px;--wh-wave-bar-gap:1px}
+ .now-progress .times{gap:4px}
+ .now-progress .times>span:first-child{color:var(--wh-text-primary)}
+ .now-progress .wave-moment{top:-28px;width:44px;height:44px;margin-left:-22px;display:grid;place-items:center}
+ .now-progress .wave-moment>span{width:6px;height:6px;border-radius:50%;background:currentColor;font-size:0}
+ .now-progress .wave-moment:after{display:none}
+ .now-progress .wave-tooltip{top:-30px}
+ .now-progress .wave-loop-region{top:0;bottom:17px;background:color-mix(in srgb,var(--wh-accent-500) 16%,transparent)}
+ .now-progress .wave-loop-handle{top:-2px;bottom:12px;height:auto;min-height:44px;min-width:28px;padding:0 0 0 4px;border-left:2px solid var(--wh-accent-300);border-radius:0;background:transparent;color:var(--wh-accent-300);transform:none;display:flex;align-items:flex-end}
+ .now-dock .now-controls{flex-wrap:nowrap;gap:4px;margin:0}
+ .now-dock .now-controls>.icon-button{width:44px;min-width:40px;padding:8px}
+ .now-dock .now-bottom{flex-wrap:nowrap;justify-content:space-between;gap:4px;margin:0}
+ .now-dock .now-bottom .button{padding:6px 0;gap:6px;min-height:44px;background:none;white-space:nowrap}
+ .now-dock .now-bottom .button[aria-haspopup=dialog]{padding:6px 10px;background:rgba(255,255,255,.08);border-radius:999px}
+ .now-playing>.listening-extras{flex:none;padding:24px 0 max(24px,env(safe-area-inset-bottom))}
+ @container now-player (min-height:780px){
+  .now-progress{padding-top:30px}
+  .now-playing .now-progress>.waveform{height:131px;--wh-wave-bar-width:3px;--wh-wave-bar-gap:2px}
+  .now-progress .wave-loop-region{bottom:35px}
+  .now-progress .wave-loop-handle{bottom:24px}
+  .now-progress .wave-moment>span{width:8px;height:8px}
+ }
+}

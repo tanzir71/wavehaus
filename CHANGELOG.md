@@ -1,5 +1,16 @@
 # Changelog
 
+## Mobile Now Playing controls above the fold · 2026-11-25
+
+- Keep transport and Lyrics / Sleep / Queue in a bottom dock within the dynamic
+  viewport, including system safe areas and visible app notices. Let square
+  artwork shrink before the controls; keep additional listening tools below.
+- Use the M5b compact 61px waveform on shorter viewports and the 131px waveform
+  where height permits. Keep format and visibility beside the artist, and show
+  an active A–B loop between the elapsed and remaining times.
+- Verify the usable viewports for 384×832, 360×740 and 412×915 phones, browser
+  toolbar height changes, setup hints, active loops, sleep, queue and seeking.
+
 ## Touch scrolling without accidental playback · 2026-11-24
 
 - Wait for a completed touch tap or deliberate horizontal waveform scrub before

@@ -15,11 +15,12 @@ export function Waveform({peaks,position=0,duration=0,onSeek,variant='Scrubber',
   const el=canvas.current!,wrap=container.current!,ctx=el.getContext('2d');if(!ctx)return;
   let visible=false,frame=0,geometryDirty=true,width=0,height=0,dpr=1;
   let layout=layoutSegments([],0),bars:{x:number;y:number;h:number;mirror:number;w:number}[]=[];
-  const large=variant==='Hero'||variant==='Now',reflection=variant!=='Row'&&variant!=='Strip',bar=large?3:2,gap=large?2:1;
+  const large=variant==='Hero'||variant==='Now',reflection=variant!=='Row'&&variant!=='Strip';
   const styles=getComputedStyle(wrap),colour=(name:string)=>styles.getPropertyValue(name).trim();
   const palette={unplayed:colour('--wh-wave-unplayed'),played:colour('--wh-wave-played'),reflection:colour('--wh-wave-reflection'),playedReflection:colour('--wh-wave-played-reflection'),hover:colour('--wh-wave-hover')};
   function geometry(){
    const rect=wrap.getBoundingClientRect();width=rect.width;height=rect.height;dpr=devicePixelRatio||1;if(!width||!height)return;
+   const responsive=getComputedStyle(wrap),bar=parseFloat(responsive.getPropertyValue('--wh-wave-bar-width'))||(large?3:2),gap=parseFloat(responsive.getPropertyValue('--wh-wave-bar-gap'))||(large?2:1);
    const pixelWidth=Math.round(width*dpr),pixelHeight=Math.round(height*dpr);if(el.width!==pixelWidth||el.height!==pixelHeight){el.width=pixelWidth;el.height=pixelHeight;}
    const pieces=segments?.length?segments:[{id:'track',title:'',durationMs:duration,peaks}];layout=layoutSegments(pieces,width);bars=[];const baseline=height*.7;
    for(const piece of layout){const values=decode(piece.peaks);if(!values){bars.push({x:piece.x,y:baseline-2,w:piece.width,h:2,mirror:0});continue;}
