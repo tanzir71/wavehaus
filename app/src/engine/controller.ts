@@ -116,10 +116,12 @@ export class AudioEngine {
  async restore(){
   const epoch=this.epoch,generation=this.generation,saved=await this.options.persistence.read();
   if(!saved||epoch!==this.epoch||generation!==this.generation)return;
+  const savedCurrent=saved.sections?saved.sections.current:saved.queue[saved.index];
+  // A different queued song is not a substitute for an inaccessible last track.
+  if(!savedCurrent||!this.catalog.has(savedCurrent))return;
   this.queue.shuffle=saved.shuffle;this.queue.repeat=saved.repeat;this.queue.autoplay=saved.autoplay;
   if(saved.sections)this.queue.restore(saved.sections,this.catalog);
   else{const tracks=saved.queue.flatMap(id=>this.catalog.get(id)||[]),id=saved.queue[saved.index],index=Math.max(0,tracks.findIndex(t=>t.id===id));this.queue.start(tracks,index);}
-  const savedCurrent=saved.sections?.current||saved.queue[saved.index];
   if(this.queue.current)this.select(this.queue.current,this.current?.id===savedCurrent?saved.positionMs:0,false);this.prepareNext();
  }
  start(tracks:Track[],index=0,label='Your library',type='library',positionMs=0){

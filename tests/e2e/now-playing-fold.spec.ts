@@ -13,7 +13,7 @@ async function openPlayer(page:Page,dismissHint=true){
 }
 
 async function expectDockInView(page:Page){
- expect(await page.evaluate(()=>scrollY)).toBe(0);
+ expect(await page.locator('.app-body').evaluate(element=>element.scrollTop)).toBe(0);
  const geometry=await page.locator('.now-stage').evaluate(stage=>{
   const rect=(selector:string)=>{const box=stage.querySelector(selector)!.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height,bottom:box.bottom,right:box.right};};
   return {viewport:{width:innerWidth,height:innerHeight},stageBottom:stage.getBoundingClientRect().bottom,dock:rect('.now-dock'),art:rect('.now-art>.cover'),artSlot:rect('.now-art'),controls:rect('.now-controls'),bottom:rect('.now-bottom'),wave:rect('.waveform'),buttons:[...stage.querySelectorAll('.now-controls button,.now-bottom button,.now-bottom a')].map(button=>{const box=button.getBoundingClientRect();return {top:box.top,bottom:box.bottom,left:box.left,right:box.right};})};
@@ -54,7 +54,7 @@ test('height changes, a visible setup hint and an active loop keep the dock in v
  await page.locator('.listening-extras').getByRole('button',{name:'Set A',exact:true}).click();
  const slider=page.locator('.now-progress .wave-hit');await slider.focus();await slider.press('ArrowRight');
  await page.locator('.listening-extras').getByRole('button',{name:'Set B',exact:true}).click();
- await page.evaluate(()=>scrollTo(0,0));
+ await page.locator('.app-body').evaluate(element=>element.scrollTo(0,0));
  await expect(page.locator('.now-loop-status')).toContainText('Loop A–B');
  for(const viewport of [{width:384,height:748},{width:360,height:656},{width:412,height:855}]){await page.setViewportSize(viewport);await expectDockInView(page);}
  await page.getByRole('button',{name:'Dismiss background play hint'}).click();

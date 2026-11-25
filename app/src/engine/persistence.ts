@@ -9,6 +9,7 @@ export class PlaybackPersistence implements PlayerPersistence {
  private store;
  private key:string|null=null;
  private legacyKey:string|null=null;
+ private guest=false;
  private epoch=0;
  private writes=0;
  private pending:PlayerSnapshot|null=null;
@@ -17,10 +18,11 @@ export class PlaybackPersistence implements PlayerPersistence {
  private warned=false;
  private online=()=>this.flush();
  constructor(private api:Api,private base:string,private onStorageError:()=>void=()=>{}){this.store=createStore(`wh-playback-${api.demo?'demo':'http'}`,'state');addEventListener('online',this.online);}
- configure(userId:string|null){this.epoch++;this.request?.abort();this.request=null;this.pending=null;this.key=userId?`${this.base}:${userId}`:null;this.legacyKey=userId?`wh-player-${this.api.demo?'demo':'http'}:${userId}`:null;this.warned=false;this.lastWrite=0;}
+ configure(userId:string|null){this.epoch++;this.request?.abort();this.request=null;this.pending=null;this.guest=!userId;this.key=userId?`${this.base}:${userId}`:`wh-player-guest:${this.base}`;this.legacyKey=userId?`wh-player-${this.api.demo?'demo':'http'}:${userId}`:null;this.warned=false;this.lastWrite=0;}
  private clean(value:unknown){try{return value&&typeof value==='object'?playerInput(value as Record<string,unknown>,50000):null;}catch{return null;}}
  async read(){
   if(!this.key)return null;const key=this.key,epoch=this.epoch,writes=this.writes;
+  if(this.guest){try{const saved=this.clean(JSON.parse(localStorage.getItem(key)||'null'));if(saved)this.lastWrite=saved.updatedAt;return saved;}catch{return null;}}
   const [local,legacy,remote]=await Promise.all([get(key,this.store).catch(()=>null),get(this.legacyKey!).catch(()=>null),this.api.request('/api/player-state').catch(()=>null)]);
   if(epoch!==this.epoch||writes!==this.writes)return null;const snapshots=[local,legacy,remote].map(value=>this.clean(value)).filter((value):value is PlayerSnapshot=>!!value).sort((a,b)=>b.updatedAt-a.updatedAt),latest=snapshots[0]||null;
   if(latest){this.lastWrite=latest.updatedAt;void set(key,latest,this.store).catch(()=>this.storageError());}
@@ -28,6 +30,7 @@ export class PlaybackPersistence implements PlayerPersistence {
  }
  write(snapshot:PlayerSnapshot,remote=false,pagehide=false){
   if(!this.key)return;this.writes++;const key=this.key,updatedAt=Math.max(snapshot.updatedAt,this.lastWrite+1);this.lastWrite=updatedAt;const local={...snapshot,updatedAt};
+  if(this.guest){try{localStorage.setItem(key,JSON.stringify(local));}catch{this.storageError();}return;}
   void set(key,local,this.store).catch(()=>this.storageError());
   if(!remote)return;this.pending=cloudSnapshot(local);
   if(pagehide){

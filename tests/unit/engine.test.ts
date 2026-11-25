@@ -73,6 +73,12 @@ describe('the permanent audio engine',()=>{
  it('ignores a slow restore after the listener has already chosen music',async()=>{
   const{engine,setRead}=setup();engine.setCatalog([track(1),track(2)]);let resolve!:(v:PlayerSnapshot)=>void;setRead(()=>new Promise(r=>{resolve=r;}));const restoring=engine.restore();engine.start([track(2)]);resolve({queue:[track(1).id],index:0,positionMs:7000,shuffle:false,repeat:'off',autoplay:false,updatedAt:1});await restoring;expect(engine.current?.id).toBe(track(2).id);
  });
+ it('does not restore a different queued track when the last track is inaccessible',async()=>{
+  const{engine,audio,setRead}=setup();engine.setCatalog([track(2)]);setRead(async()=>({queue:[track(1).id,track(2).id],index:0,positionMs:4500,shuffle:false,repeat:'off',autoplay:false,updatedAt:1}));await engine.restore();expect(engine.current).toBe(null);expect(audio.calls).toEqual([]);
+ });
+ it('keeps the final track paused after the queue ends',()=>{
+  const{engine,audio}=setup();engine.start([track(1)]);audio.metadata();audio.end();expect(engine.current?.id).toBe(track(1).id);expect(engine.state).toBe('paused');expect(engine.positionMs).toBe(10000);engine.resume();expect(engine.current?.id).toBe(track(1).id);expect(audio.currentTime).toBe(0);expect(engine.state).toBe('playing');
+ });
  it('stops an end-of-track sleep before repeat-one or queue advance',()=>{
   const{engine,audio}=setup();engine.start([track(1),track(2)]);audio.metadata();engine.setRepeat('one');engine.sleep('endOfTrack');audio.calls=[];audio.end();expect(audio.calls).toEqual([]);expect(engine.current?.id).toBe(track(1).id);expect(engine.state).toBe('paused');expect(engine.sleepTrack).toBe(null);
  });

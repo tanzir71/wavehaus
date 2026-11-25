@@ -1,5 +1,18 @@
 # Changelog
 
+## Player space follows loaded music · 2026-11-25
+
+- Let the rendered player own its layout row. A fresh desktop uses the full
+  window, while mobile reserves only its tab bar until a track is loaded.
+  Main content scrolls above the actual bar without a second bottom offset.
+- Restore public guest playback from deployment-scoped localStorage, paused
+  with audio preload disabled. Keep signed-in server/device history separate,
+  and reject an inaccessible saved track instead of choosing another song.
+- Reveal the existing bar over 200ms, respect reduced motion, preserve the
+  clicked control's position, and retain the last track when its queue ends.
+- Verify desktop at 1440×900 and 1920×1080, mobile geometry, guest/server
+  restore without media requests, sign-out, access revocation and scroll ends.
+
 ## Mobile Now Playing controls above the fold · 2026-11-25
 
 - Keep transport and Lyrics / Sleep / Queue in a bottom dock within the dynamic

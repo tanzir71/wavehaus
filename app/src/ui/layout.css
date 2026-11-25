@@ -1,0 +1,14 @@
+/* The rendered bar owns its row. An absent player consumes no layout space. */
+.app-shell{display:grid;grid-template-columns:264px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;height:100dvh;overflow:hidden}
+.app-shell>.sidebar{grid-area:1 / 1;position:relative;inset:auto;width:100%;height:100%;min-height:0;overflow:auto}
+.app-shell>.app-body{grid-area:1 / 2;margin:0;padding-bottom:0;min-width:0;min-height:0;height:100%;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.app-shell>.player{grid-area:2 / 1 / 3 / -1;position:relative;inset:auto;width:auto;animation:player-reveal 200ms ease-out both}
+@keyframes player-reveal{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@media(min-width:1100px){.app-shell{grid-template-columns:var(--wh-sidebar-w) minmax(0,1fr)}}
+@media(max-width:719px){
+ .app-shell{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto auto}
+ .app-shell>.app-body{grid-area:1 / 1;scrollbar-gutter:auto}
+ .app-shell>.player{grid-area:2 / 1;margin:8px 16px}
+ .app-shell>.bottom-nav{grid-area:3 / 1;position:relative;inset:auto}
+}
+@media(prefers-reduced-motion:reduce){.app-shell>.player{animation:none}}

@@ -38,7 +38,7 @@ function publish(){batch(()=>{
  const sleep=sleepState.peek();if(sleep.until!==engine.sleepUntil||sleep.track!==engine.sleepTrack)sleepState.value={until:engine.sleepUntil,track:engine.sleepTrack};
  if(queueRevision!==engine.queueRevision){queueRevision=engine.queueRevision;const q=engine.queue,timeline=q.timeline;queue.value=timeline.map(e=>e.track);queueIndex.value=Math.max(0,timeline.findIndex(e=>e.key===q.current?.key));repeat.value=q.repeat;shuffle.value=q.shuffle;smartShuffle.value=q.smartShuffle;autoplay.value=q.autoplay;unsupportedTracks.value=new Set(engine.unsupported);queueSections.value={current:q.current,manual:[...q.manual],context:[...q.remaining],automatic:[...q.automatic],label:q.contextLabel,type:q.contextType};}
 });}
-export function configureUser(userId:string){engine.configure(userId);}
+export function configureUser(userId:string|null){engine.configure(userId);}
 export function clearPlayer(){engine.configure(null);}
 export function updateLibrary(tracks:Track[],albums:Album[]){media.setAlbums(albums);engine.setCatalog(tracks);}
 export async function restore(tracks:Track[]){engine.setCatalog(tracks);await engine.restore();}

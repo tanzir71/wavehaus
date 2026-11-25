@@ -14,14 +14,15 @@ async function pausedHome(page:Page){
  await expect.poll(()=>page.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>a.currentTime)).toBeGreaterThan(.1);
  await page.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>a.pause());
 }
-test('vertical swipes over album waveforms scroll without switching or starting music',async({page},info)=>{
+test('vertical swipes over listening waveforms scroll without switching or starting music',async({page},info)=>{
  test.skip(info.project.name!=='android','Real touch input is covered by the Android project.');await pausedHome(page);
- const waveform=page.locator('.fresh-card .wave-hit').first();
  for(const dy of [-140,140]){
-  await waveform.evaluate(element=>element.scrollIntoView({block:'center'}));const before=await page.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>({src:a.src,time:a.currentTime})),scroll=await page.evaluate(()=>scrollY);
+  // Choose a wave with room to scroll in the tested direction.
+  const waveform=page.locator(dy<0?'.resume-card .wave-hit':'.fresh-card .wave-hit').first();
+  await waveform.evaluate(element=>element.scrollIntoView({block:'center'}));const before=await page.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>({src:a.src,time:a.currentTime})),scroll=await page.locator('.app-body').evaluate(element=>element.scrollTop);
   await touch(page,waveform,2,dy);
   expect(await page.locator('#wavehaus-audio').evaluate((a:HTMLAudioElement)=>({src:a.src,time:a.currentTime,paused:a.paused}))).toEqual({...before,paused:true});
-  await expect.poll(()=>page.evaluate(()=>scrollY)).not.toBe(scroll);
+  await expect.poll(()=>page.locator('.app-body').evaluate(element=>element.scrollTop)).not.toBe(scroll);
  }
 });
 test('a touch tap waits for release; horizontal scrubbing and keyboard seeking still work',async({page},info)=>{
